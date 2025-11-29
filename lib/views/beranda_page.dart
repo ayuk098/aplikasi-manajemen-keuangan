@@ -71,7 +71,7 @@ class _BerandaPageState extends State<BerandaPage> {
   @override
   Widget build(BuildContext context) {
     final transaksiC = Provider.of<TransaksiController>(context);
-    final auth = Provider.of<AuthController>(context);
+    final auth = Provider.of<AuthController>(context); // ⬅️ ambil auth
     final weekDates = _getWeekDates(_selectedDate);
 
     if (!_isDateFormatInitialized) {
@@ -193,30 +193,32 @@ class _BerandaPageState extends State<BerandaPage> {
                                   decoration: BoxDecoration(
                                     color:
                                         date.day == _selectedDate.day &&
-                                            date.month == _selectedDate.month &&
-                                            date.year == _selectedDate.year
-                                        ? Colors.white
-                                        : Colors.transparent,
+                                                date.month ==
+                                                    _selectedDate.month &&
+                                                date.year == _selectedDate.year
+                                            ? Colors.white
+                                            : Colors.transparent,
                                     shape: BoxShape.circle,
                                   ),
                                   child: Center(
                                     child: Text(
                                       date.day.toString(),
                                       style: TextStyle(
-                                        color:
-                                            date.day == _selectedDate.day &&
+                                        color: date.day == _selectedDate.day &&
                                                 date.month ==
                                                     _selectedDate.month &&
-                                                date.year == _selectedDate.year
+                                                date.year ==
+                                                    _selectedDate.year
                                             ? _primaryColor
                                             : Colors.white,
                                         fontWeight:
                                             date.day == DateTime.now().day &&
-                                                date.month ==
-                                                    DateTime.now().month &&
-                                                date.year == DateTime.now().year
-                                            ? FontWeight.bold
-                                            : FontWeight.normal,
+                                                    date.month ==
+                                                        DateTime.now().month &&
+                                                    date.year ==
+                                                        DateTime.now().year
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
                                         fontSize: 14,
                                       ),
                                     ),
@@ -269,7 +271,9 @@ class _BerandaPageState extends State<BerandaPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        "Rp ${_formatCurrency(transaksiC.sisaUang)}",
+                        auth.formatFromIdr(
+                          transaksiC.sisaUang,
+                        ), // 🔁 konversi otomatis
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -291,6 +295,7 @@ class _BerandaPageState extends State<BerandaPage> {
                         transaksiC.totalPemasukan,
                         Colors.green,
                         Icons.arrow_upward,
+                        auth, // ⬅️ kirim auth
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -300,6 +305,7 @@ class _BerandaPageState extends State<BerandaPage> {
                         transaksiC.totalPengeluaran,
                         Colors.red,
                         Icons.arrow_downward,
+                        auth, // ⬅️ kirim auth
                       ),
                     ),
                   ],
@@ -351,7 +357,12 @@ class _BerandaPageState extends State<BerandaPage> {
                     itemCount: transaksiC.semuaTransaksi.length,
                     itemBuilder: (context, index) {
                       final transaksi = transaksiC.semuaTransaksi[index];
-                      return _itemTransaksi(context, transaksi, transaksiC);
+                      return _itemTransaksi(
+                        context,
+                        transaksi,
+                        transaksiC,
+                        auth, // ⬅️ kirim auth
+                      );
                     },
                   ),
           ),
@@ -360,7 +371,7 @@ class _BerandaPageState extends State<BerandaPage> {
     );
   }
 
-  // Format currency tanpa menggunakan NumberFormat untuk menghindari locale issues
+  // Boleh dibiarkan, walau sudah tidak dipakai.
   String _formatCurrency(double value) {
     return value
         .toStringAsFixed(0)
@@ -371,7 +382,13 @@ class _BerandaPageState extends State<BerandaPage> {
   }
 
   // ===================== WIDGET INFO CARD =====================
-  Widget _infoCard(String title, double value, Color color, IconData icon) {
+  Widget _infoCard(
+    String title,
+    double value,
+    Color color,
+    IconData icon,
+    AuthController auth,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -394,7 +411,7 @@ class _BerandaPageState extends State<BerandaPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            "Rp ${_formatCurrency(value)}",
+            auth.formatFromIdr(value), // ⬅️ konversi pemasukan/pengeluaran
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
@@ -410,6 +427,7 @@ class _BerandaPageState extends State<BerandaPage> {
     BuildContext context,
     TransaksiModel t,
     TransaksiController transaksiC,
+    AuthController auth,
   ) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -468,7 +486,7 @@ class _BerandaPageState extends State<BerandaPage> {
 
                 // Jumlah
                 Text(
-                  "Rp ${_formatCurrency(t.jumlah)}",
+                  auth.formatFromIdr(t.jumlah), // ⬅️ konversi jumlah
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -486,7 +504,7 @@ class _BerandaPageState extends State<BerandaPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               // Tombol Edit
-              Container(
+              SizedBox(
                 width: 36,
                 height: 36,
                 child: IconButton(
@@ -497,7 +515,7 @@ class _BerandaPageState extends State<BerandaPage> {
                       arguments: t,
                     );
                   },
-                  icon: Icon(Icons.edit, color: Colors.blue, size: 18),
+                  icon: const Icon(Icons.edit, color: Colors.blue, size: 18),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),
@@ -506,12 +524,17 @@ class _BerandaPageState extends State<BerandaPage> {
               const SizedBox(width: 8),
 
               // Tombol Hapus
-              Container(
+              SizedBox(
                 width: 36,
                 height: 36,
                 child: IconButton(
                   onPressed: () {
-                    _showDeleteConfirmationDialog(context, t, transaksiC);
+                    _showDeleteConfirmationDialog(
+                      context,
+                      t,
+                      transaksiC,
+                      auth,
+                    );
                   },
                   icon: const Icon(Icons.delete, color: Colors.red, size: 18),
                   padding: EdgeInsets.zero,
@@ -530,6 +553,7 @@ class _BerandaPageState extends State<BerandaPage> {
     BuildContext context,
     TransaksiModel transaksi,
     TransaksiController transaksiC,
+    AuthController auth,
   ) {
     showDialog(
       context: context,
@@ -560,7 +584,7 @@ class _BerandaPageState extends State<BerandaPage> {
                   color: Colors.orange.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.warning_rounded,
                   color: Colors.orange,
                   size: 32,
@@ -641,7 +665,9 @@ class _BerandaPageState extends State<BerandaPage> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            "Rp ${_formatCurrency(transaksi.jumlah)}",
+                            auth.formatFromIdr(
+                              transaksi.jumlah,
+                            ), // ⬅️ konversi di dialog
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,

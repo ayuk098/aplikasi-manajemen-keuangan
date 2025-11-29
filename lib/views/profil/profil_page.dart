@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
+import '../../services/currency_service.dart';
 import 'developer_page.dart';
 
 class ProfilPage extends StatefulWidget {
@@ -17,7 +18,8 @@ class _ProfilPageState extends State<ProfilPage> {
   final Color primaryColor = const Color(0xFF006C4E);
   final ImagePicker _picker = ImagePicker();
 
-  File? _localImage; // untuk preview cepat
+  // ====== FOTO PROFIL ======
+  File? _localImage;
 
   Future<void> _pickImage(ImageSource source) async {
     final authC = Provider.of<AuthController>(context, listen: false);
@@ -33,8 +35,8 @@ class _ProfilPageState extends State<ProfilPage> {
       _localImage = File(picked.path);
     });
 
-    // SIMPAN PERMANEN KE HIVE  
-    authC.updatePhoto(picked.path);
+    // simpan ke Hive
+    await authC.updatePhoto(picked.path);
   }
 
   void _showImagePickerSheet() {
@@ -69,6 +71,81 @@ class _ProfilPageState extends State<ProfilPage> {
         );
       },
     );
+  }
+
+  // ====== PENGATURAN MATA UANG APP ======
+  bool _isCurrencyExpanded = false;
+  bool _isLoadingCurrency = false;
+  String _selectedCurrency = "USD";
+
+  final List<String> _currencies = [
+    "IDR",
+    "USD",
+    "EUR",
+    "SGD",
+    "JPY",
+    "MYR",
+    "AUD",
+  ];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Sinkronkan _selectedCurrency dengan auth.selectedCurrency
+    final authC = Provider.of<AuthController>(context);
+    _selectedCurrency = authC.selectedCurrency;
+  }
+
+  Future<void> _setAppCurrency(
+    String currency,
+    AuthController authC,
+  ) async {
+    setState(() {
+      _isLoadingCurrency = true;
+      _selectedCurrency = currency;
+    });
+
+    try {
+      if (currency == "IDR") {
+        // default: 1 IDR = 1 IDR
+        await authC.updateCurrency("IDR", 1.0);
+      } else {
+        // ambil rate dari CurrencyService
+        final rate = await CurrencyService.getRate(currency);
+
+        if (rate == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Gagal mengambil kurs $currency"),
+              backgroundColor: Colors.red,
+            ),
+          );
+          setState(() => _isLoadingCurrency = false);
+          return;
+        }
+
+        // asumsi: rate = nilai 1 IDR dalam mata uang target
+        // kalau di AuthController kamu pakai "IDR ke mata uang"
+        // cukup simpan langsung rate ini:
+        await authC.updateCurrency(currency, rate);
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Mata uang aplikasi diubah ke $currency"),
+          backgroundColor: primaryColor,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Terjadi kesalahan: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+
+    setState(() => _isLoadingCurrency = false);
   }
 
   @override
@@ -115,14 +192,14 @@ class _ProfilPageState extends State<ProfilPage> {
                   Center(
                     child: Column(
                       children: [
-                        // FOTO PROFIL + BUTTON KAMERA
                         Stack(
                           children: [
                             CircleAvatar(
                               radius: 55,
                               backgroundColor: const Color(0xFFE0E0E0),
-                              backgroundImage:
-                                  profileImageFile != null ? FileImage(profileImageFile) : null,
+                              backgroundImage: profileImageFile != null
+                                  ? FileImage(profileImageFile)
+                                  : null,
                               child: profileImageFile == null
                                   ? const Icon(
                                       Icons.person,
@@ -131,8 +208,6 @@ class _ProfilPageState extends State<ProfilPage> {
                                     )
                                   : null,
                             ),
-
-                            // ICON KAMERA (fix hilang)
                             Positioned(
                               bottom: 0,
                               right: 0,
@@ -143,7 +218,7 @@ class _ProfilPageState extends State<ProfilPage> {
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     shape: BoxShape.circle,
-                                    boxShadow: [
+                                    boxShadow: const [
                                       BoxShadow(
                                         color: Colors.black26,
                                         blurRadius: 3,
@@ -160,10 +235,8 @@ class _ProfilPageState extends State<ProfilPage> {
                             ),
                           ],
                         ),
-
                         const SizedBox(height: 12),
 
-                        // NAMA
                         Text(
                           displayName,
                           style: const TextStyle(
@@ -195,15 +268,132 @@ class _ProfilPageState extends State<ProfilPage> {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 children: [
-                  MenuCard(
-                    primaryColor: primaryColor,
-                    icon: Icons.attach_money,
-                    label: "Konversi Mata Uang",
-                    trailing: const Icon(Icons.keyboard_arrow_down),
-                    onTap: () {},
+                  // ===========================================================
+                  //     CARD MATA UANG APLIKASI (USER CUMA PILIH CURRENCY)
+                  // ===========================================================
+                  Container(
+                    width: double.infinity,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: primaryColor, width: 1.3),
+                    ),
+                    child: Column(
+                      children: [
+                        // HEADER CARD
+                        InkWell(
+                          onTap: () {
+                            setState(() {
+                              _isCurrencyExpanded = !_isCurrencyExpanded;
+                            });
+                          },
+                          child: Row(
+                            children: [
+                              Icon(Icons.attach_money, color: primaryColor),
+                              const SizedBox(width: 12),
+                              const Expanded(
+                                child: Text(
+                                  "Mata Uang Aplikasi",
+                                  style: TextStyle(fontSize: 15),
+                                ),
+                              ),
+                              Icon(
+                                _isCurrencyExpanded
+                                    ? Icons.keyboard_arrow_up
+                                    : Icons.keyboard_arrow_down,
+                                color: primaryColor,
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        if (_isCurrencyExpanded) ...[
+                          const SizedBox(height: 10),
+                          const Divider(height: 1),
+                          const SizedBox(height: 10),
+
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              "Pilih mata uang yang akan digunakan di seluruh aplikasi:",
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Dropdown mata uang
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: primaryColor),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: _selectedCurrency,
+                                isExpanded: true,
+                                items: _currencies
+                                    .map(
+                                      (c) => DropdownMenuItem(
+                                        value: c,
+                                        child: Text(c),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (val) {
+                                  if (val != null && !_isLoadingCurrency) {
+                                    _setAppCurrency(val, authC);
+                                  }
+                                },
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 10),
+
+                          if (_isLoadingCurrency)
+                            Row(
+                              children: const [
+                                SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  "Mengambil kurs & menyimpan pengaturan...",
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                              ],
+                            )
+                          else
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                "Mata uang aktif: ${authC.selectedCurrency}",
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ],
+                    ),
                   ),
+
                   const SizedBox(height: 12),
 
+                  // ================= DEVELOPER =================
                   MenuCard(
                     primaryColor: primaryColor,
                     icon: Icons.info_outline,
@@ -216,8 +406,10 @@ class _ProfilPageState extends State<ProfilPage> {
                       );
                     },
                   ),
+
                   const SizedBox(height: 12),
 
+                  // ================= PENGATURAN =================
                   MenuCard(
                     primaryColor: primaryColor,
                     icon: Icons.settings,

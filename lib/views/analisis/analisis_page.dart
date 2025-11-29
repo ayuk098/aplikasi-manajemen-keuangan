@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../controllers/transaksi_controller.dart';
 import '../../controllers/kategori_controller.dart';
+import '../../controllers/auth_controller.dart';
 import '../../models/transaksi_model.dart';
 import '../../models/kategori_model.dart';
 
@@ -23,15 +24,15 @@ class _AnalisisPageState extends State<AnalisisPage> {
 
   // Realtime / Bulanan
   String _selectedPeriod = "Realtime";
+
   // Filter tipe pemasukan/pengeluaran/semua
   FilterTipe _selectedType = FilterTipe.pengeluaran;
 
+  // Untuk chart
   Map<String, double> dataMap = {"Tidak Ada Data": 100.0};
   List<Color> colorList = [Colors.grey];
-
-  // Total nominal transaksi yang tampil di chart (untuk persen legend)
-  double _chartSum = 0.0;
-  double _displayTotal = 0.0;
+  double _chartSum = 0.0;       // total nominal (IDR)
+  double _displayTotal = 0.0;   // total yg ditampilkan (IDR)
 
   late TransaksiController _transaksiC;
   late KategoriController _kategoriC;
@@ -73,7 +74,7 @@ class _AnalisisPageState extends State<AnalisisPage> {
     );
   }
 
-  // LOGIKA DATA (periode + tipe)
+  // LOGIKA FILTER & CHART
   void _generateChartData(
     List<TransaksiModel> semuaTransaksi,
     List<KategoriModel> semuaKategori,
@@ -82,21 +83,19 @@ class _AnalisisPageState extends State<AnalisisPage> {
 
     final now = DateTime.now();
 
-    // Filter dulu berdasarkan periode (Realtime / Bulanan)
+    // --------------------------- Filter Periode ---------------------------
     List<TransaksiModel> filteredByPeriod = semuaTransaksi.where((t) {
       final tanggal = t.tanggal;
       if (_selectedPeriod == "Realtime") {
-        // hari ini
         return tanggal.year == now.year &&
             tanggal.month == now.month &&
             tanggal.day == now.day;
       } else {
-        // bulan ini
         return tanggal.year == now.year && tanggal.month == now.month;
       }
     }).toList();
 
-    // Total pemasukan & pengeluaran di PERIODE terpilih
+    // --------------------------- Total period -----------------------------
     final totalPemasukan = filteredByPeriod
         .where((t) => t.tipe == "pemasukan")
         .fold(0.0, (sum, t) => sum + t.jumlah);
@@ -105,7 +104,7 @@ class _AnalisisPageState extends State<AnalisisPage> {
         .where((t) => t.tipe == "pengeluaran")
         .fold(0.0, (sum, t) => sum + t.jumlah);
 
-    //Filter transaksi untuk CHART sesuai tipe
+    // --------------------------- Filter tipe untuk chart -----------------
     final List<TransaksiModel> filteredForChart =
         filteredByPeriod.where((t) {
       switch (_selectedType) {
@@ -118,7 +117,7 @@ class _AnalisisPageState extends State<AnalisisPage> {
       }
     }).toList();
 
-    //Kelompokkan per kategori
+    // --------------------------- Group kategori --------------------------
     final Map<String, double> categoryTotals = {};
     for (var t in filteredForChart) {
       final kategori = semuaKategori.firstWhere(
@@ -138,11 +137,10 @@ class _AnalisisPageState extends State<AnalisisPage> {
       );
     }
 
-    //Total nominal untuk persen legend (jumlah semua slice)
     final chartSum =
         filteredForChart.fold(0.0, (sum, t) => sum + t.jumlah);
 
-    //Total yang ditampilkan di bawah chart
+    // Total yg tampil di bawah chart
     double displayTotal;
     switch (_selectedType) {
       case FilterTipe.pemasukan:
@@ -156,7 +154,7 @@ class _AnalisisPageState extends State<AnalisisPage> {
         break;
     }
 
-    //Warna slice chart
+    // --------------------------- Warna -------------------------------
     final baseColors = [
       Colors.red,
       Colors.green,
@@ -186,18 +184,15 @@ class _AnalisisPageState extends State<AnalisisPage> {
     setState(() {
       dataMap = newDataMap;
       colorList = newColors;
-      _chartSum = chartSum;
-      _displayTotal = displayTotal;
+      _chartSum = chartSum;         // dalam IDR
+      _displayTotal = displayTotal; // dalam IDR
     });
   }
 
-  // HELPER UI
-  String _formatCurrency(double value) {
-    final f = NumberFormat('#,##0', 'id_ID');
-    return f.format(value);
-  }
-
-  Widget _buildLegend() {
+  // -------------------------------------
+  // LEGEND UI
+  // -------------------------------------
+  Widget _buildLegend(AuthController auth) {
     if (dataMap.isEmpty ||
         (dataMap.keys.first == "Tidak Ada Data" && _chartSum == 0.0)) {
       return Padding(
@@ -214,9 +209,10 @@ class _AnalisisPageState extends State<AnalisisPage> {
       children: dataMap.keys.map((key) {
         final index = dataMap.keys.toList().indexOf(key);
         final color = colorList[index % colorList.length];
-        final amount = dataMap[key]!;
+
+        final amountIDR = dataMap[key]!;
         final percentage =
-            _chartSum > 0 ? (amount / _chartSum * 100) : 0.0;
+            _chartSum > 0 ? (amountIDR / _chartSum * 100) : 0.0;
 
         return Padding(
           padding:
@@ -236,11 +232,13 @@ class _AnalisisPageState extends State<AnalisisPage> {
                   style: const TextStyle(fontSize: 16),
                 ),
               ),
+
+              // NOMINAL + PERCENT
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    "Rp ${_formatCurrency(amount)}",
+                    auth.formatFromIdr(amountIDR), // <- konversi
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   Text(
@@ -259,10 +257,13 @@ class _AnalisisPageState extends State<AnalisisPage> {
     );
   }
 
+  // -------------------------------------
   // BUILD
+  // -------------------------------------
   @override
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.of(context).padding.top;
+    final auth = Provider.of<AuthController>(context); // <<< penting
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -272,7 +273,7 @@ class _AnalisisPageState extends State<AnalisisPage> {
         child: Container(
           padding: EdgeInsets.fromLTRB(
             20,
-            topPadding + 8, 
+            topPadding + 8,
             20,
             20,
           ),
@@ -297,7 +298,7 @@ class _AnalisisPageState extends State<AnalisisPage> {
 
               const SizedBox(height: 16),
 
-              // ===== SEGMENTED CONTROL REALTIME / BULANAN =====
+              // ========== PERIOD SWITCH ==========
               Container(
                 height: 45,
                 decoration: BoxDecoration(
@@ -374,8 +375,9 @@ class _AnalisisPageState extends State<AnalisisPage> {
 
               const SizedBox(height: 12),
 
+              // ===== FILTER TIPE =====
               Container(
-                height: 40, 
+                height: 40,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -418,6 +420,7 @@ class _AnalisisPageState extends State<AnalisisPage> {
           children: [
             const SizedBox(height: 32),
 
+            // PIE CHART (data tetap IDR)
             PieChart(
               dataMap: dataMap,
               colorList: colorList,
@@ -438,8 +441,9 @@ class _AnalisisPageState extends State<AnalisisPage> {
 
             const SizedBox(height: 24),
 
+            // ==== TOTAL (konversi mata uang) ====
             Text(
-              "Total: Rp ${_formatCurrency(_displayTotal)}",
+              "Total: ${auth.formatFromIdr(_displayTotal)}",
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -447,7 +451,10 @@ class _AnalisisPageState extends State<AnalisisPage> {
             ),
 
             const SizedBox(height: 20),
-            _buildLegend(),
+
+            // ==== LEGEND CATEGORIES ====
+            _buildLegend(auth),
+
             const SizedBox(height: 80),
           ],
         ),

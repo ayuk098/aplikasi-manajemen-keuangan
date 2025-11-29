@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '/../controllers/dompet_controller.dart';
+import '/../controllers/auth_controller.dart';
 import '/../models/dompet_model.dart';
 import 'tambah_dompet_dialog.dart';
 import 'edit_dompet_dialog.dart';
@@ -12,6 +13,7 @@ class DompetPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dompetController = Provider.of<DompetController>(context);
+    final auth = Provider.of<AuthController>(context); // <-- ambil auth
     final semuaDompet = dompetController.semuaDompet;
 
     return Scaffold(
@@ -35,7 +37,12 @@ class DompetPage extends StatelessWidget {
 
       body: semuaDompet.isEmpty
           ? _buildEmptyState()
-          : _buildDompetList(semuaDompet, dompetController, context),
+          : _buildDompetList(
+              semuaDompet,
+              dompetController,
+              auth,        // <-- kirim auth
+              context,
+            ),
     );
   }
 
@@ -81,6 +88,7 @@ class DompetPage extends StatelessWidget {
   Widget _buildDompetList(
     List<DompetModel> semuaDompet,
     DompetController controller,
+    AuthController auth,         // <-- terima auth di sini
     BuildContext context,
   ) {
     return Padding(
@@ -113,7 +121,9 @@ class DompetPage extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 3),
-                      Text("Saldo: Rp ${d.saldoAwal.toStringAsFixed(2)}"),
+                      Text(
+                        "Saldo: ${auth.formatFromIdr(d.saldoAwal)}",
+                      ),
                     ],
                   ),
                 ),
