@@ -59,9 +59,25 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  bool checkSession() {
-    return _sessionBox.get('userId') != null;
+    bool checkSession() {
+      return _sessionBox.get('userId') != null;
+    }
+
+    Future<void> updatePhoto(String path) async {
+    if (currentUser == null) return;
+
+    // update field fotoPath
+    currentUser!.fotoPath = path;
+
+    // Simpan kembali user ke Hive
+    final index = _userBox.values.toList().indexWhere((u) => u.id == currentUser!.id);
+    if (index != -1) {
+      await _userBox.putAt(index, currentUser!);
+    }
+
+    notifyListeners();
   }
+
 
   Future<void> logout() async {
     await _sessionBox.clear();
