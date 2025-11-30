@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-
-// Import pages
 import '../../views/beranda_page.dart';
 import '../../views/kategori/kategori_page.dart';
 import '../../views/dompet/dompet_page.dart';

@@ -1,7 +1,7 @@
-// main.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import 'models/user_model.dart';
 import 'models/kategori_model.dart';
@@ -17,10 +17,12 @@ import 'controllers/kategori_controller.dart';
 import 'controllers/dompet_controller.dart';
 
 import 'routes/app_routes.dart';
+import 'views/landing_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // INIT HIVE
   await Hive.initFlutter();
   Hive.registerAdapter(UserModelAdapter());
   Hive.registerAdapter(KategoriModelAdapter());
@@ -28,7 +30,12 @@ void main() async {
   Hive.registerAdapter(TransaksiModelAdapter());
 
   await HiveService.init();
+
+  // INIT NOTIFICATION SERVICE
   await NotificationService.init();
+
+  // WAJIB UNTUK ANDROID 13+
+  await Permission.notification.request();
 
   runApp(const MyApp());
 }
@@ -44,10 +51,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        /// AUTH
         ChangeNotifierProvider(create: (_) => AuthController()),
 
-        /// DOMPET CONTROLLER
+        // DOMPET
         ChangeNotifierProxyProvider<AuthController, DompetController>(
           create: (context) {
             final userId = _getCurrentUserId(
@@ -57,6 +63,7 @@ class MyApp extends StatelessWidget {
           },
           update: (context, auth, previous) {
             final userId = _getCurrentUserId(auth);
+
             if (userId.isNotEmpty &&
                 (previous == null || previous.currentUserId != userId)) {
               final c = DompetController(userId);
@@ -67,7 +74,7 @@ class MyApp extends StatelessWidget {
           },
         ),
 
-        /// KATEGORI CONTROLLER
+        // KATEGORI
         ChangeNotifierProxyProvider<AuthController, KategoriController>(
           create: (context) {
             final userId = _getCurrentUserId(
@@ -77,6 +84,7 @@ class MyApp extends StatelessWidget {
           },
           update: (context, auth, previous) {
             final userId = _getCurrentUserId(auth);
+
             if (userId.isNotEmpty &&
                 (previous == null || previous.currentUserId != userId)) {
               final c = KategoriController(userId);
@@ -87,14 +95,21 @@ class MyApp extends StatelessWidget {
           },
         ),
 
-        /// TRANSAKSI CONTROLLER — HARUS PAKAI DOMPET CONTROLLER!!!
-        ChangeNotifierProxyProvider2<AuthController, DompetController,
-            TransaksiController>(
+        // TRANSAKSI
+        ChangeNotifierProxyProvider2<
+          AuthController,
+          DompetController,
+          TransaksiController
+        >(
           create: (context) {
             final userId = _getCurrentUserId(
               Provider.of<AuthController>(context, listen: false),
             );
-            final dompet = Provider.of<DompetController>(context, listen: false);
+            final dompet = Provider.of<DompetController>(
+              context,
+              listen: false,
+            );
+
             return TransaksiController(userId, dompet);
           },
           update: (context, auth, dompet, previous) {
@@ -104,21 +119,22 @@ class MyApp extends StatelessWidget {
                 (previous == null || previous.currentUserId != userId)) {
               return TransaksiController(userId, dompet);
             }
-
             return previous ?? TransaksiController(userId, dompet);
           },
         ),
       ],
-
-      /// APP ROOT
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Keuangan App',
+
         initialRoute: '/splash',
+
         routes: {
+          '/landing': (_) => const LandingScreen(),
           '/splash': (_) => const SplashScreen(),
           ...AppRoutes.routes,
         },
+
         onGenerateRoute: AppRoutes.onGenerate,
       ),
     );
@@ -137,21 +153,33 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
 
-    Future.delayed(const Duration(milliseconds: 500), () async {
-      final auth = Provider.of<AuthController>(context, listen: false);
-      final hasSession = await auth.checkSession();
-
+    Future.delayed(const Duration(milliseconds: 1500), () {
       if (!mounted) return;
 
-      Navigator.pushReplacementNamed(
-          context, hasSession ? '/main' : '/login');
+      final auth = Provider.of<AuthController>(context, listen: false);
+      final hasSession = auth.checkSession();
+
+      if (hasSession) {
+        Navigator.pushReplacementNamed(context, '/main');
+      } else {
+        Navigator.pushReplacementNamed(context, '/landing');
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            SizedBox(height: 20),
+            CircularProgressIndicator(color: Color(0xFF00674F)),
+          ],
+        ),
+      ),
     );
   }
 }

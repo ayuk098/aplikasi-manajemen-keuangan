@@ -123,10 +123,6 @@ class _ProfilPageState extends State<ProfilPage> {
           setState(() => _isLoadingCurrency = false);
           return;
         }
-
-        // asumsi: rate = nilai 1 IDR dalam mata uang target
-        // kalau di AuthController kamu pakai "IDR ke mata uang"
-        // cukup simpan langsung rate ini:
         await authC.updateCurrency(currency, rate);
       }
 

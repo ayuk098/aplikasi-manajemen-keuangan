@@ -4,6 +4,7 @@ import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
 
 import '../../controllers/transaksi_controller.dart';
+import '../../controllers/auth_controller.dart'; // Import AuthController kamu
 import '../../models/transaksi_model.dart';
 import '../../models/kategori_model.dart';
 import '../../models/dompet_model.dart';
@@ -31,16 +32,40 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
   final Color borderColor = const Color(0xFFE0E0E0);
 
   bool _isLoading = false;
+  bool _isInit = true;
 
   @override
   void initState() {
     super.initState();
     _deskripsiC = TextEditingController(text: widget.transaksi.deskripsi);
-    _jumlahC = TextEditingController(text: widget.transaksi.jumlah.toString());
+    // _jumlahC diisi nanti di didChangeDependencies agar bisa akses AuthController
+    _jumlahC = TextEditingController();
     _tipe = widget.transaksi.tipe;
     _kategoriId = widget.transaksi.kategoriId;
     _dompetId = widget.transaksi.dompetId;
     _tanggal = widget.transaksi.tanggal;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_isInit) {
+      // Akses AuthController tanpa mengubah file AuthController
+      final authC = Provider.of<AuthController>(context, listen: false);
+
+      // LOGIKA KONVERSI TAMPILAN:
+      // Ambil IDR dari DB -> Kalikan dengan selectedRate milik AuthController
+      double convertedValue =
+          widget.transaksi.jumlah *
+          authC.selectedRate; // <--- PAKE selectedRate
+
+      // Format tampilan (hilangkan .0 jika bulat)
+      _jumlahC.text = convertedValue % 1 == 0
+          ? convertedValue.toInt().toString()
+          : convertedValue.toStringAsFixed(2);
+
+      _isInit = false;
+    }
   }
 
   @override
@@ -50,21 +75,46 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
     super.dispose();
   }
 
+  // Helper lokal untuk simbol (karena _symbolForCurrency di AuthController itu private)
+  String _getSymbol(String currencyCode) {
+    switch (currencyCode) {
+      case 'USD':
+        return '\$';
+      case 'EUR':
+        return '€';
+      case 'SGD':
+        return 'S\$';
+      case 'JPY':
+        return '¥';
+      case 'MYR':
+        return 'RM';
+      case 'AUD':
+        return 'A\$';
+      case 'IDR':
+      default:
+        return 'Rp';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final transaksiC = Provider.of<TransaksiController>(context);
+    final authC = Provider.of<AuthController>(context);
 
-    // ===== Ambil User ID login dari session Hive =====
+    // Ambil variable langsung dari AuthController kamu
+    final double currentRate = authC.selectedRate; // <--- PAKE selectedRate
+    final String currencyCode =
+        authC.selectedCurrency; // <--- PAKE selectedCurrency
+    final String currencySymbol = _getSymbol(currencyCode);
+
     final sessionBox = Hive.box('session');
     final currentUserId = sessionBox.get('userId');
 
-    // ===== Ambil seluruh kategori milik user =====
     final kategoriBox = Hive.box<KategoriModel>('kategori');
     final kategoriFiltered = kategoriBox.values
         .where((e) => e.userId == currentUserId && e.tipe == _tipe)
         .toList();
 
-    // ===== Ambil seluruh dompet milik user =====
     final dompetBox = Hive.box<DompetModel>('dompet');
     final dompetFiltered = dompetBox.values
         .where((e) => e.userId == currentUserId)
@@ -78,7 +128,6 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
         elevation: 0,
         title: const Text("Edit transaksi"),
       ),
-
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(
@@ -89,7 +138,7 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
               key: _formKey,
               child: Column(
                 children: [
-                  // ============ Header tipe transaksi ============
+                  // TIPE SELEKTOR
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
@@ -103,7 +152,6 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
                     child: _tipeSelector(),
                   ),
 
-                  // ============ Content =============
                   Expanded(
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.symmetric(
@@ -123,13 +171,16 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
                           const SizedBox(height: 20),
 
                           _label("Jumlah"),
+                          // Input Field dengan Simbol Dinamis
                           _inputField(
-                            hint: "Rp 0",
+                            hint: "0",
                             controller: _jumlahC,
                             isNumber: true,
+                            currencySymbol: currencySymbol,
                             validator: (v) {
                               if (v!.isEmpty) return "Jumlah wajib diisi";
-                              if (double.tryParse(v) == null) {
+                              if (double.tryParse(v.replaceAll(',', '')) ==
+                                  null) {
                                 return "Masukkan angka yang valid";
                               }
                               return null;
@@ -171,7 +222,6 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
                           ),
                           const SizedBox(height: 20),
 
-                          // ============ KATEGORI =============
                           _label("Pilih kategori"),
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -200,9 +250,9 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
                           ),
                           const SizedBox(height: 20),
 
-                          // ============ DOMPET =============
                           _label("Pilih dompet"),
                           if (dompetFiltered.isEmpty)
+                            // Tampilan peringatan jika dompet kosong
                             Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
@@ -210,26 +260,51 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
                                 borderRadius: BorderRadius.circular(10),
                                 color: Colors.orange[50],
                               ),
-                              child: const Text(
-                                "Belum ada dompet. Tambahkan dulu.",
-                                style: TextStyle(color: Colors.orange),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.warning,
+                                    color: Colors.orange[800],
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Expanded(
+                                    child: Text(
+                                      "Belum ada dompet. Tambahkan dulu.",
+                                      style: TextStyle(color: Colors.orange),
+                                    ),
+                                  ),
+                                ],
                               ),
                             )
                           else
-                            Column(
-                              children: dompetFiltered.map((d) {
-                                return RadioListTile<String>(
-                                  value: d.id,
-                                  groupValue: _dompetId,
-                                  activeColor: primary,
-                                  title: Text(d.nama),
-                                  subtitle: Text(
-                                    "Rp ${NumberFormat('#,##0').format(d.saldoAwal)}",
-                                  ),
-                                  onChanged: (v) =>
-                                      setState(() => _dompetId = v),
-                                );
-                              }).toList(),
+                            // LIST DOMPET DENGAN SALDO TERKONVERSI
+                            Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(color: borderColor),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Column(
+                                children: dompetFiltered.map((d) {
+                                  // HITUNG KONVERSI SALDO DOMPET
+                                  // Saldo asli (IDR) * selectedRate = Saldo Tampil
+                                  double convertedSaldo =
+                                      d.saldoAwal * currentRate;
+
+                                  return RadioListTile<String>(
+                                    value: d.id,
+                                    groupValue: _dompetId,
+                                    activeColor: primary,
+                                    title: Text(d.nama),
+                                    subtitle: Text(
+                                      // Tampilkan Simbol + Saldo Terkonversi
+                                      "$currencySymbol ${NumberFormat('#,##0.##').format(convertedSaldo)}",
+                                      style: TextStyle(color: Colors.grey[600]),
+                                    ),
+                                    onChanged: (v) =>
+                                        setState(() => _dompetId = v),
+                                  );
+                                }).toList(),
+                              ),
                             ),
 
                           const SizedBox(height: 30),
@@ -238,7 +313,7 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
                     ),
                   ),
 
-                  // SAVE BUTTON
+                  // TOMBOL UPDATE
                   Container(
                     padding: const EdgeInsets.all(16),
                     child: SizedBox(
@@ -269,7 +344,6 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
     );
   }
 
-  // ========== Date Picker ==========
   Future<void> _selectDate(BuildContext context) async {
     final pilih = await showDatePicker(
       context: context,
@@ -280,17 +354,10 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
     if (pilih != null) setState(() => _tanggal = pilih);
   }
 
-  // ========== Update Transaksi ==========
   Future<void> _updateTransaksi() async {
     if (!_formKey.currentState!.validate()) return;
-
-    if (_kategoriId == null) {
-      return _error("Pilih kategori terlebih dahulu");
-    }
-
-    if (_dompetId == null) {
-      return _error("Pilih dompet terlebih dahulu");
-    }
+    if (_kategoriId == null) return _error("Pilih kategori terlebih dahulu");
+    if (_dompetId == null) return _error("Pilih dompet terlebih dahulu");
 
     setState(() => _isLoading = true);
 
@@ -299,10 +366,18 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
         context,
         listen: false,
       );
+      final authC = Provider.of<AuthController>(context, listen: false);
+
+      // 1. Ambil angka input user (misal user input "5" dollar)
+      double inputAmount = double.parse(_jumlahC.text.replaceAll(',', ''));
+
+      // 2. Kembalikan ke IDR sebelum disimpan (5 / rate = IDR asli)
+      double finalAmountIDR =
+          inputAmount / authC.selectedRate; // <--- PAKE selectedRate
 
       final updated = TransaksiModel(
         id: widget.transaksi.id,
-        jumlah: double.parse(_jumlahC.text),
+        jumlah: finalAmountIDR, // Simpan ke DB dalam bentuk IDR
         kategoriId: _kategoriId!,
         dompetId: _dompetId!,
         tanggal: _tanggal,
@@ -314,14 +389,12 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
       await transaksiC.updateTransaksi(widget.transaksi.id, updated);
 
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text("Transaksi berhasil diperbarui!"),
           backgroundColor: primary,
         ),
       );
-
       Navigator.pop(context);
     } catch (e) {
       _error("Gagal update transaksi: $e");
@@ -330,7 +403,6 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
     }
   }
 
-  // ========== Helper UI ==========
   void _error(String msg) {
     ScaffoldMessenger.of(
       context,
@@ -359,7 +431,7 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
       child: GestureDetector(
         onTap: () => setState(() {
           _tipe = value;
-          _kategoriId = null; // Reset kategori saat tipe berubah
+          _kategoriId = null;
         }),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -399,7 +471,8 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
     String? hint,
     TextEditingController? controller,
     bool isNumber = false,
-    String? Function(String?)? validator,
+    String? currencySymbol,
+    required String? Function(String?)? validator,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -407,17 +480,35 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
         border: Border.all(color: borderColor),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: TextFormField(
-        controller: controller,
-        validator: validator,
-        keyboardType: isNumber
-            ? const TextInputType.numberWithOptions(decimal: false)
-            : TextInputType.text,
-        decoration: InputDecoration(
-          hintText: hint,
-          border: InputBorder.none,
-          prefix: isNumber ? const Text("Rp ") : null,
-        ),
+      child: Row(
+        children: [
+          if (isNumber && currencySymbol != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: Text(
+                currencySymbol,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+          Expanded(
+            child: TextFormField(
+              controller: controller,
+              validator: validator,
+              keyboardType: isNumber
+                  ? const TextInputType.numberWithOptions(decimal: true)
+                  : TextInputType.text,
+              decoration: InputDecoration(
+                hintText: hint,
+                border: InputBorder.none,
+                isDense: true,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

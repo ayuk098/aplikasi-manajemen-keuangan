@@ -43,7 +43,6 @@ class _BerandaPageState extends State<BerandaPage> {
     return weekDates;
   }
 
-  // Format nama bulan manual untuk menghindari locale issues
   String _getMonthYear(DateTime date) {
     const monthNames = [
       'Januari',
@@ -106,7 +105,7 @@ class _BerandaPageState extends State<BerandaPage> {
 
       body: Column(
         children: [
-          // ===================== KALENDER MINGGUAN =====================
+          //kalender
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             decoration: BoxDecoration(
@@ -125,7 +124,6 @@ class _BerandaPageState extends State<BerandaPage> {
             ),
             child: Column(
               children: [
-                // Header bulan dan tahun
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -165,7 +163,7 @@ class _BerandaPageState extends State<BerandaPage> {
 
                 const SizedBox(height: 16),
 
-                // Hari dalam minggu (Sen, Sel, Rab, Kam, Jum, Sab, Min)
+                // Hari dalam minggu
                 Row(
                   children: weekDates
                       .map(
@@ -193,32 +191,30 @@ class _BerandaPageState extends State<BerandaPage> {
                                   decoration: BoxDecoration(
                                     color:
                                         date.day == _selectedDate.day &&
-                                                date.month ==
-                                                    _selectedDate.month &&
-                                                date.year == _selectedDate.year
-                                            ? Colors.white
-                                            : Colors.transparent,
+                                            date.month == _selectedDate.month &&
+                                            date.year == _selectedDate.year
+                                        ? Colors.white
+                                        : Colors.transparent,
                                     shape: BoxShape.circle,
                                   ),
                                   child: Center(
                                     child: Text(
                                       date.day.toString(),
                                       style: TextStyle(
-                                        color: date.day == _selectedDate.day &&
+                                        color:
+                                            date.day == _selectedDate.day &&
                                                 date.month ==
                                                     _selectedDate.month &&
-                                                date.year ==
-                                                    _selectedDate.year
+                                                date.year == _selectedDate.year
                                             ? _primaryColor
                                             : Colors.white,
                                         fontWeight:
                                             date.day == DateTime.now().day &&
-                                                    date.month ==
-                                                        DateTime.now().month &&
-                                                    date.year ==
-                                                        DateTime.now().year
-                                                ? FontWeight.bold
-                                                : FontWeight.normal,
+                                                date.month ==
+                                                    DateTime.now().month &&
+                                                date.year == DateTime.now().year
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
                                         fontSize: 14,
                                       ),
                                     ),
@@ -235,7 +231,6 @@ class _BerandaPageState extends State<BerandaPage> {
             ),
           ),
 
-          // ===================== INFORMASI KEUANGAN =====================
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -271,9 +266,7 @@ class _BerandaPageState extends State<BerandaPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        auth.formatFromIdr(
-                          transaksiC.sisaUang,
-                        ), // 🔁 konversi otomatis
+                        auth.formatFromIdr(transaksiC.sisaUang),
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -295,7 +288,7 @@ class _BerandaPageState extends State<BerandaPage> {
                         transaksiC.totalPemasukan,
                         Colors.green,
                         Icons.arrow_upward,
-                        auth, // ⬅️ kirim auth
+                        auth,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -305,7 +298,7 @@ class _BerandaPageState extends State<BerandaPage> {
                         transaksiC.totalPengeluaran,
                         Colors.red,
                         Icons.arrow_downward,
-                        auth, // ⬅️ kirim auth
+                        auth,
                       ),
                     ),
                   ],
@@ -314,7 +307,6 @@ class _BerandaPageState extends State<BerandaPage> {
             ),
           ),
 
-          // ===================== HEADER TRANSAKSI =====================
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: const Row(
@@ -331,7 +323,6 @@ class _BerandaPageState extends State<BerandaPage> {
             ),
           ),
 
-          // ===================== LISTVIEW TRANSAKSI =====================
           Expanded(
             child: transaksiC.semuaTransaksi.isEmpty
                 ? const Center(
@@ -361,7 +352,7 @@ class _BerandaPageState extends State<BerandaPage> {
                         context,
                         transaksi,
                         transaksiC,
-                        auth, // ⬅️ kirim auth
+                        auth,
                       );
                     },
                   ),
@@ -371,7 +362,6 @@ class _BerandaPageState extends State<BerandaPage> {
     );
   }
 
-  // Boleh dibiarkan, walau sudah tidak dipakai.
   String _formatCurrency(double value) {
     return value
         .toStringAsFixed(0)
@@ -381,7 +371,6 @@ class _BerandaPageState extends State<BerandaPage> {
         );
   }
 
-  // ===================== WIDGET INFO CARD =====================
   Widget _infoCard(
     String title,
     double value,
@@ -411,7 +400,7 @@ class _BerandaPageState extends State<BerandaPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            auth.formatFromIdr(value), // ⬅️ konversi pemasukan/pengeluaran
+            auth.formatFromIdr(value),
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
@@ -446,7 +435,6 @@ class _BerandaPageState extends State<BerandaPage> {
       ),
       child: Row(
         children: [
-          // Icon berdasarkan tipe transaksi
           Container(
             width: 44,
             height: 44,
@@ -464,13 +452,10 @@ class _BerandaPageState extends State<BerandaPage> {
           ),
 
           const SizedBox(width: 12),
-
-          // Konten utama (deskripsi dan jumlah)
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Deskripsi
                 Text(
                   t.deskripsi,
                   style: const TextStyle(
@@ -486,7 +471,7 @@ class _BerandaPageState extends State<BerandaPage> {
 
                 // Jumlah
                 Text(
-                  auth.formatFromIdr(t.jumlah), // ⬅️ konversi jumlah
+                  auth.formatFromIdr(t.jumlah),
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -499,11 +484,9 @@ class _BerandaPageState extends State<BerandaPage> {
 
           const SizedBox(width: 12),
 
-          // Tombol aksi (edit dan hapus)
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Tombol Edit
               SizedBox(
                 width: 36,
                 height: 36,
@@ -523,18 +506,12 @@ class _BerandaPageState extends State<BerandaPage> {
 
               const SizedBox(width: 8),
 
-              // Tombol Hapus
               SizedBox(
                 width: 36,
                 height: 36,
                 child: IconButton(
                   onPressed: () {
-                    _showDeleteConfirmationDialog(
-                      context,
-                      t,
-                      transaksiC,
-                      auth,
-                    );
+                    _showDeleteConfirmationDialog(context, t, transaksiC, auth);
                   },
                   icon: const Icon(Icons.delete, color: Colors.red, size: 18),
                   padding: EdgeInsets.zero,
@@ -548,7 +525,6 @@ class _BerandaPageState extends State<BerandaPage> {
     );
   }
 
-  // ===================== DIALOG KONFIRMASI HAPUS =====================
   void _showDeleteConfirmationDialog(
     BuildContext context,
     TransaksiModel transaksi,
@@ -577,7 +553,6 @@ class _BerandaPageState extends State<BerandaPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Header dengan icon warning
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -615,7 +590,6 @@ class _BerandaPageState extends State<BerandaPage> {
 
               const SizedBox(height: 20),
 
-              // Card preview transaksi
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
@@ -626,7 +600,6 @@ class _BerandaPageState extends State<BerandaPage> {
                 ),
                 child: Row(
                   children: [
-                    // Icon transaksi
                     Container(
                       width: 40,
                       height: 40,
@@ -649,7 +622,6 @@ class _BerandaPageState extends State<BerandaPage> {
 
                     const SizedBox(width: 12),
 
-                    // Detail transaksi
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -665,9 +637,7 @@ class _BerandaPageState extends State<BerandaPage> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            auth.formatFromIdr(
-                              transaksi.jumlah,
-                            ), // ⬅️ konversi di dialog
+                            auth.formatFromIdr(transaksi.jumlah),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -680,7 +650,6 @@ class _BerandaPageState extends State<BerandaPage> {
                       ),
                     ),
 
-                    // Badge tipe
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -713,11 +682,8 @@ class _BerandaPageState extends State<BerandaPage> {
               ),
 
               const SizedBox(height: 24),
-
-              // Tombol aksi
               Row(
                 children: [
-                  // Tombol Batal
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.of(context).pop(),
@@ -741,7 +707,6 @@ class _BerandaPageState extends State<BerandaPage> {
 
                   const SizedBox(width: 12),
 
-                  // Tombol Hapus
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
