@@ -83,10 +83,7 @@ class _BerandaPageState extends State<BerandaPage> {
         backgroundColor: _primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
-          "Beranda",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        title: const Text("Beranda"),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),

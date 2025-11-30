@@ -9,12 +9,12 @@ class DeveloperPage extends StatelessWidget {
     {
       "name": "Zeva Mila Sabrina",
       "nim": "124230043",
-      "photo": "", // isi path foto kalau ada
+      "photo": "assets/images/zeva.jpg",
     },
     {
       "name": "Wahyu Ramadhani Manurung",
       "nim": "124230041",
-      "photo": "", // isi path foto kalau ada
+      "photo": "assets/images/ayu.jpeg", 
     },
   ];
 
