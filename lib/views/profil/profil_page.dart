@@ -24,10 +24,7 @@ class _ProfilPageState extends State<ProfilPage> {
   Future<void> _pickImage(ImageSource source) async {
     final authC = Provider.of<AuthController>(context, listen: false);
 
-    final picked = await _picker.pickImage(
-      source: source,
-      imageQuality: 70,
-    );
+    final picked = await _picker.pickImage(source: source, imageQuality: 70);
 
     if (picked == null) return;
 
@@ -96,10 +93,7 @@ class _ProfilPageState extends State<ProfilPage> {
     _selectedCurrency = authC.selectedCurrency;
   }
 
-  Future<void> _setAppCurrency(
-    String currency,
-    AuthController authC,
-  ) async {
+  Future<void> _setAppCurrency(String currency, AuthController authC) async {
     setState(() {
       _isLoadingCurrency = true;
       _selectedCurrency = currency;
@@ -164,12 +158,7 @@ class _ProfilPageState extends State<ProfilPage> {
             // ================= HEADER HIJAU =================
             Container(
               width: double.infinity,
-              padding: EdgeInsets.fromLTRB(
-                20,
-                topPadding + 16,
-                20,
-                24,
-              ),
+              padding: EdgeInsets.fromLTRB(20, topPadding + 16, 20, 24),
               decoration: BoxDecoration(
                 color: primaryColor,
                 borderRadius: const BorderRadius.only(
@@ -269,8 +258,10 @@ class _ProfilPageState extends State<ProfilPage> {
                   // ===========================================================
                   Container(
                     width: double.infinity,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
@@ -326,7 +317,9 @@ class _ProfilPageState extends State<ProfilPage> {
                           Container(
                             width: double.infinity,
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 4),
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: primaryColor),
@@ -462,12 +455,7 @@ class MenuCard extends StatelessWidget {
           children: [
             Icon(icon, color: primaryColor),
             const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: const TextStyle(fontSize: 15),
-              ),
-            ),
+            Expanded(child: Text(label, style: const TextStyle(fontSize: 15))),
             trailing ?? const SizedBox.shrink(),
           ],
         ),

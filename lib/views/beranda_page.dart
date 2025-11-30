@@ -70,7 +70,7 @@ class _BerandaPageState extends State<BerandaPage> {
   @override
   Widget build(BuildContext context) {
     final transaksiC = Provider.of<TransaksiController>(context);
-    final auth = Provider.of<AuthController>(context); // ⬅️ ambil auth
+    final auth = Provider.of<AuthController>(context);
     final weekDates = _getWeekDates(_selectedDate);
 
     if (!_isDateFormatInitialized) {

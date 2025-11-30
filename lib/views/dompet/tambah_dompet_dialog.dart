@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '/../controllers/dompet_controller.dart';
+import '../../controllers/dompet_controller.dart';
+import '../../controllers/auth_controller.dart'; // 1. Import AuthController
 
 class TambahDompetDialog extends StatefulWidget {
   const TambahDompetDialog({super.key});
@@ -22,9 +23,34 @@ class _TambahDompetDialogState extends State<TambahDompetDialog> {
     super.dispose();
   }
 
+  // 2. Helper Simbol Mata Uang
+  String _getSymbol(String currencyCode) {
+    switch (currencyCode) {
+      case 'USD':
+        return '\$';
+      case 'EUR':
+        return '€';
+      case 'SGD':
+        return 'S\$';
+      case 'JPY':
+        return '¥';
+      case 'MYR':
+        return 'RM';
+      case 'AUD':
+        return 'A\$';
+      case 'IDR':
+      default:
+        return 'Rp';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final dompetController = Provider.of<DompetController>(context);
+
+    // 3. AMBIL DATA AUTH UNTUK SIMBOL & RATE
+    final authC = Provider.of<AuthController>(context);
+    final String currencySymbol = _getSymbol(authC.selectedCurrency);
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -147,7 +173,8 @@ class _TambahDompetDialogState extends State<TambahDompetDialog> {
                           color: Colors.grey[400],
                           fontSize: 14,
                         ),
-                        prefixText: "Rp ",
+                        // 4. GUNAKAN SIMBOL DINAMIS
+                        prefixText: "$currencySymbol ",
                         prefixStyle: const TextStyle(
                           color: Colors.black,
                           fontWeight: FontWeight.w500,
@@ -178,7 +205,8 @@ class _TambahDompetDialogState extends State<TambahDompetDialog> {
                         if (value == null || value.isEmpty) {
                           return 'Saldo tidak boleh kosong';
                         }
-                        if (double.tryParse(value) == null) {
+                        if (double.tryParse(value.replaceAll(',', '')) ==
+                            null) {
                           return 'Masukkan angka yang valid';
                         }
                         return null;
@@ -218,9 +246,21 @@ class _TambahDompetDialogState extends State<TambahDompetDialog> {
                     child: ElevatedButton(
                       onPressed: () {
                         if (_formKey.currentState!.validate()) {
+                          // 5. LOGIKA KONVERSI SIMPAN
+                          // Ambil input user (misal 100 USD)
+                          double inputAmount =
+                              double.tryParse(
+                                saldoC.text.replaceAll(',', ''),
+                              ) ??
+                              0;
+
+                          // Kembalikan ke IDR sebelum disimpan (100 / rate = IDR Asli)
+                          double finalSaldoIDR =
+                              inputAmount / authC.selectedRate;
+
                           dompetController.tambahDompet(
                             namaC.text.trim(),
-                            double.tryParse(saldoC.text) ?? 0,
+                            finalSaldoIDR, // Simpan sebagai IDR
                           );
                           Navigator.pop(context);
 

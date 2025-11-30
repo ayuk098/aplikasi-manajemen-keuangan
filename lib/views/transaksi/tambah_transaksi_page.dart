@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import '../../models/kategori_model.dart';
 import '../../controllers/transaksi_controller.dart';
 import '../../controllers/dompet_controller.dart';
-import '../../controllers/auth_controller.dart'; // Import AuthController
+import '../../controllers/auth_controller.dart'; 
 
 class TambahTransaksiPage extends StatefulWidget {
   const TambahTransaksiPage({super.key});
@@ -37,7 +37,6 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
     super.dispose();
   }
 
-  // --- Helper: Ubah kode mata uang (USD) jadi simbol ($) ---
   String _getSymbol(String currencyCode) {
     switch (currencyCode) {
       case 'USD':
@@ -63,10 +62,9 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
     final transaksiC = Provider.of<TransaksiController>(context);
     final dompetC = Provider.of<DompetController>(context);
 
-    // 1. AMBIL DATA DARI AUTH CONTROLLER
     final authC = Provider.of<AuthController>(context);
     final String mataUangCode = authC.selectedCurrency;
-    final double currentRate = authC.selectedRate; // Ambil Rate (PENTING)
+    final double currentRate = authC.selectedRate;
     final String simbol = _getSymbol(mataUangCode);
 
     final kategoriBox = Hive.box<KategoriModel>('kategori');
@@ -90,7 +88,6 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
               key: _formKey,
               child: Column(
                 children: [
-                  // --- Header Tab Pemasukan/Pengeluaran ---
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
@@ -244,8 +241,6 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
                               ),
                               child: Column(
                                 children: semuaDompetUser.map((d) {
-                                  // 2. KONVERSI TAMPILAN SALDO
-                                  // Saldo DB (IDR) * Rate = Saldo Tampil (USD)
                                   double convertedSaldo =
                                       d.saldoAwal * currentRate;
 
@@ -317,16 +312,13 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
     final transaksiC = Provider.of<TransaksiController>(context, listen: false);
     final authC = Provider.of<AuthController>(context, listen: false);
 
-    // 3. LOGIKA KONVERSI SEBELUM SIMPAN
-    // Ambil angka input user (misal user input 10 USD)
     double inputAmount = double.parse(_jumlahC.text.replaceAll(',', ''));
 
-    // Kembalikan ke IDR sebelum disimpan (10 / Rate = IDR asli)
     double finalAmountIDR = inputAmount / authC.selectedRate;
 
     await transaksiC.simpanTransaksi(
       deskripsi: _deskripsiC.text,
-      jumlahText: finalAmountIDR.toString(), // Kirim angka IDR ke controller
+      jumlahText: finalAmountIDR.toString(),
       tanggal: _tanggal,
       tipe: _tipe,
       kategoriId: _kategoriId!,

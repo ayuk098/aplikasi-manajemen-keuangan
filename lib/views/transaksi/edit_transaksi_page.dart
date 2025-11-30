@@ -4,7 +4,7 @@ import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
 
 import '../../controllers/transaksi_controller.dart';
-import '../../controllers/auth_controller.dart'; // Import AuthController kamu
+import '../../controllers/auth_controller.dart'; 
 import '../../models/transaksi_model.dart';
 import '../../models/kategori_model.dart';
 import '../../models/dompet_model.dart';
@@ -38,7 +38,6 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
   void initState() {
     super.initState();
     _deskripsiC = TextEditingController(text: widget.transaksi.deskripsi);
-    // _jumlahC diisi nanti di didChangeDependencies agar bisa akses AuthController
     _jumlahC = TextEditingController();
     _tipe = widget.transaksi.tipe;
     _kategoriId = widget.transaksi.kategoriId;
@@ -50,16 +49,12 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_isInit) {
-      // Akses AuthController tanpa mengubah file AuthController
       final authC = Provider.of<AuthController>(context, listen: false);
 
-      // LOGIKA KONVERSI TAMPILAN:
-      // Ambil IDR dari DB -> Kalikan dengan selectedRate milik AuthController
       double convertedValue =
           widget.transaksi.jumlah *
-          authC.selectedRate; // <--- PAKE selectedRate
+          authC.selectedRate; 
 
-      // Format tampilan (hilangkan .0 jika bulat)
       _jumlahC.text = convertedValue % 1 == 0
           ? convertedValue.toInt().toString()
           : convertedValue.toStringAsFixed(2);
@@ -75,7 +70,6 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
     super.dispose();
   }
 
-  // Helper lokal untuk simbol (karena _symbolForCurrency di AuthController itu private)
   String _getSymbol(String currencyCode) {
     switch (currencyCode) {
       case 'USD':
@@ -101,10 +95,9 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
     final transaksiC = Provider.of<TransaksiController>(context);
     final authC = Provider.of<AuthController>(context);
 
-    // Ambil variable langsung dari AuthController kamu
-    final double currentRate = authC.selectedRate; // <--- PAKE selectedRate
+    final double currentRate = authC.selectedRate; 
     final String currencyCode =
-        authC.selectedCurrency; // <--- PAKE selectedCurrency
+        authC.selectedCurrency;
     final String currencySymbol = _getSymbol(currencyCode);
 
     final sessionBox = Hive.box('session');
@@ -138,7 +131,6 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
               key: _formKey,
               child: Column(
                 children: [
-                  // TIPE SELEKTOR
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
@@ -171,7 +163,6 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
                           const SizedBox(height: 20),
 
                           _label("Jumlah"),
-                          // Input Field dengan Simbol Dinamis
                           _inputField(
                             hint: "0",
                             controller: _jumlahC,
@@ -252,7 +243,6 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
 
                           _label("Pilih dompet"),
                           if (dompetFiltered.isEmpty)
-                            // Tampilan peringatan jika dompet kosong
                             Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
@@ -277,7 +267,7 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
                               ),
                             )
                           else
-                            // LIST DOMPET DENGAN SALDO TERKONVERSI
+
                             Container(
                               decoration: BoxDecoration(
                                 border: Border.all(color: borderColor),
@@ -285,8 +275,6 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
                               ),
                               child: Column(
                                 children: dompetFiltered.map((d) {
-                                  // HITUNG KONVERSI SALDO DOMPET
-                                  // Saldo asli (IDR) * selectedRate = Saldo Tampil
                                   double convertedSaldo =
                                       d.saldoAwal * currentRate;
 
@@ -296,7 +284,6 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
                                     activeColor: primary,
                                     title: Text(d.nama),
                                     subtitle: Text(
-                                      // Tampilkan Simbol + Saldo Terkonversi
                                       "$currencySymbol ${NumberFormat('#,##0.##').format(convertedSaldo)}",
                                       style: TextStyle(color: Colors.grey[600]),
                                     ),
@@ -313,7 +300,6 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
                     ),
                   ),
 
-                  // TOMBOL UPDATE
                   Container(
                     padding: const EdgeInsets.all(16),
                     child: SizedBox(
@@ -368,16 +354,14 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
       );
       final authC = Provider.of<AuthController>(context, listen: false);
 
-      // 1. Ambil angka input user (misal user input "5" dollar)
       double inputAmount = double.parse(_jumlahC.text.replaceAll(',', ''));
 
-      // 2. Kembalikan ke IDR sebelum disimpan (5 / rate = IDR asli)
       double finalAmountIDR =
-          inputAmount / authC.selectedRate; // <--- PAKE selectedRate
+          inputAmount / authC.selectedRate; 
 
       final updated = TransaksiModel(
         id: widget.transaksi.id,
-        jumlah: finalAmountIDR, // Simpan ke DB dalam bentuk IDR
+        jumlah: finalAmountIDR,
         kategoriId: _kategoriId!,
         dompetId: _dompetId!,
         tanggal: _tanggal,

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '/../controllers/dompet_controller.dart';
-import '/../models/dompet_model.dart';
+import '../../controllers/dompet_controller.dart';
+import '../../controllers/auth_controller.dart'; // 1. Import AuthController
+import '../../models/dompet_model.dart';
 
 class EditDompetDialog extends StatefulWidget {
   final DompetModel dompet;
@@ -18,11 +19,34 @@ class _EditDompetDialogState extends State<EditDompetDialog> {
   late TextEditingController saldoC;
   final _formKey = GlobalKey<FormState>();
 
+  // Penanda inisialisasi agar data tidak tertimpa saat rebuild
+  bool _isInit = true;
+
   @override
   void initState() {
     super.initState();
     namaC = TextEditingController(text: widget.dompet.nama);
-    saldoC = TextEditingController(text: widget.dompet.saldoAwal.toStringAsFixed(2));
+    // Saldo diinisialisasi kosong dulu, nanti diisi di didChangeDependencies
+    saldoC = TextEditingController();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_isInit) {
+      final authC = Provider.of<AuthController>(context, listen: false);
+
+      // 2. LOGIKA KONVERSI TAMPILAN
+      // Saldo DB (IDR) * Rate = Saldo Tampil
+      double convertedSaldo = widget.dompet.saldoAwal * authC.selectedRate;
+
+      // Format: Hapus desimal .00 jika bulat
+      saldoC.text = convertedSaldo % 1 == 0
+          ? convertedSaldo.toInt().toString()
+          : convertedSaldo.toStringAsFixed(2);
+
+      _isInit = false;
+    }
   }
 
   @override
@@ -32,14 +56,37 @@ class _EditDompetDialogState extends State<EditDompetDialog> {
     super.dispose();
   }
 
+  // Helper Simbol
+  String _getSymbol(String currencyCode) {
+    switch (currencyCode) {
+      case 'USD':
+        return '\$';
+      case 'EUR':
+        return '€';
+      case 'SGD':
+        return 'S\$';
+      case 'JPY':
+        return '¥';
+      case 'MYR':
+        return 'RM';
+      case 'AUD':
+        return 'A\$';
+      case 'IDR':
+      default:
+        return 'Rp';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final dompetController = Provider.of<DompetController>(context);
 
+    // 3. AMBIL DATA AUTH
+    final authC = Provider.of<AuthController>(context);
+    final String currencySymbol = _getSymbol(authC.selectedCurrency);
+
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 0,
       backgroundColor: Colors.transparent,
       child: Container(
@@ -129,11 +176,14 @@ class _EditDompetDialogState extends State<EditDompetDialog> {
                   TextFormField(
                     controller: saldoC,
                     style: const TextStyle(fontSize: 16),
-                    keyboardType: TextInputType.number,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     decoration: InputDecoration(
                       labelText: "Saldo Awal",
                       labelStyle: const TextStyle(color: Colors.grey),
-                      prefixText: "Rp ",
+                      // 4. GUNAKAN SIMBOL DINAMIS
+                      prefixText: "$currencySymbol ",
                       prefixStyle: const TextStyle(
                         color: Colors.black,
                         fontWeight: FontWeight.w500,
@@ -157,7 +207,8 @@ class _EditDompetDialogState extends State<EditDompetDialog> {
                       if (value == null || value.isEmpty) {
                         return 'Saldo tidak boleh kosong';
                       }
-                      if (double.tryParse(value) == null) {
+                      // Remove comma for validation
+                      if (double.tryParse(value.replaceAll(',', '')) == null) {
                         return 'Masukkan angka yang valid';
                       }
                       return null;
@@ -196,14 +247,23 @@ class _EditDompetDialogState extends State<EditDompetDialog> {
                   child: ElevatedButton(
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
+                        // 5. LOGIKA KONVERSI SIMPAN (Write)
+                        // Ambil input user (USD/EUR/dll)
+                        double inputAmount = double.parse(
+                          saldoC.text.replaceAll(',', ''),
+                        );
+
+                        // Kembalikan ke IDR sebelum simpan ke DB
+                        // Input / Rate = IDR
+                        double finalSaldoIDR = inputAmount / authC.selectedRate;
+
                         dompetController.editDompet(
                           widget.dompet.id,
                           namaC.text.trim(),
-                          double.tryParse(saldoC.text) ?? widget.dompet.saldoAwal,
+                          finalSaldoIDR, // Kirim IDR ke controller
                         );
                         Navigator.pop(context);
-                        
-                        // Show success message
+
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: const Text('Dompet berhasil diperbarui!'),
