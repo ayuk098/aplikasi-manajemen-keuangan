@@ -31,8 +31,8 @@ class _AnalisisPageState extends State<AnalisisPage> {
   // Untuk chart
   Map<String, double> dataMap = {"Tidak Ada Data": 100.0};
   List<Color> colorList = [Colors.grey];
-  double _chartSum = 0.0;       // total nominal (IDR)
-  double _displayTotal = 0.0;   // total yg ditampilkan (IDR)
+  double _chartSum = 0.0; // total nominal (IDR)
+  double _displayTotal = 0.0; // total yg ditampilkan (IDR)
 
   late TransaksiController _transaksiC;
   late KategoriController _kategoriC;
@@ -50,10 +50,7 @@ class _AnalisisPageState extends State<AnalisisPage> {
       _kategoriC.addListener(_onDataChanged);
       _listenerRegistered = true;
 
-      _generateChartData(
-        _transaksiC.semuaTransaksi,
-        _kategoriC.semuaKategori,
-      );
+      _generateChartData(_transaksiC.semuaTransaksi, _kategoriC.semuaKategori);
     });
   }
 
@@ -68,10 +65,7 @@ class _AnalisisPageState extends State<AnalisisPage> {
 
   void _onDataChanged() {
     if (!mounted) return;
-    _generateChartData(
-      _transaksiC.semuaTransaksi,
-      _kategoriC.semuaKategori,
-    );
+    _generateChartData(_transaksiC.semuaTransaksi, _kategoriC.semuaKategori);
   }
 
   // LOGIKA FILTER & CHART
@@ -105,8 +99,7 @@ class _AnalisisPageState extends State<AnalisisPage> {
         .fold(0.0, (sum, t) => sum + t.jumlah);
 
     // --------------------------- Filter tipe untuk chart -----------------
-    final List<TransaksiModel> filteredForChart =
-        filteredByPeriod.where((t) {
+    final List<TransaksiModel> filteredForChart = filteredByPeriod.where((t) {
       switch (_selectedType) {
         case FilterTipe.pemasukan:
           return t.tipe == "pemasukan";
@@ -137,8 +130,7 @@ class _AnalisisPageState extends State<AnalisisPage> {
       );
     }
 
-    final chartSum =
-        filteredForChart.fold(0.0, (sum, t) => sum + t.jumlah);
+    final chartSum = filteredForChart.fold(0.0, (sum, t) => sum + t.jumlah);
 
     // Total yg tampil di bawah chart
     double displayTotal;
@@ -184,7 +176,7 @@ class _AnalisisPageState extends State<AnalisisPage> {
     setState(() {
       dataMap = newDataMap;
       colorList = newColors;
-      _chartSum = chartSum;         // dalam IDR
+      _chartSum = chartSum; // dalam IDR
       _displayTotal = displayTotal; // dalam IDR
     });
   }
@@ -211,27 +203,19 @@ class _AnalisisPageState extends State<AnalisisPage> {
         final color = colorList[index % colorList.length];
 
         final amountIDR = dataMap[key]!;
-        final percentage =
-            _chartSum > 0 ? (amountIDR / _chartSum * 100) : 0.0;
+        final percentage = _chartSum > 0 ? (amountIDR / _chartSum * 100) : 0.0;
 
         return Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           child: Row(
             children: [
               Container(
                 width: 12,
                 height: 12,
-                decoration:
-                    BoxDecoration(color: color, shape: BoxShape.circle),
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
               ),
               const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  key,
-                  style: const TextStyle(fontSize: 16),
-                ),
-              ),
+              Expanded(child: Text(key, style: const TextStyle(fontSize: 16))),
 
               // NOMINAL + PERCENT
               Column(
@@ -243,10 +227,7 @@ class _AnalisisPageState extends State<AnalisisPage> {
                   ),
                   Text(
                     "${percentage.toStringAsFixed(1)}%",
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
                   ),
                 ],
               ),
@@ -271,12 +252,7 @@ class _AnalisisPageState extends State<AnalisisPage> {
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(170),
         child: Container(
-          padding: EdgeInsets.fromLTRB(
-            20,
-            topPadding + 8,
-            20,
-            20,
-          ),
+          padding: EdgeInsets.fromLTRB(20, topPadding + 8, 20, 20),
           decoration: BoxDecoration(
             color: primaryColor,
             borderRadius: const BorderRadius.only(
@@ -444,10 +420,7 @@ class _AnalisisPageState extends State<AnalisisPage> {
             // ==== TOTAL (konversi mata uang) ====
             Text(
               "Total: ${auth.formatFromIdr(_displayTotal)}",
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 20),

@@ -32,7 +32,10 @@ class DompetPage extends StatelessWidget {
       ),
       appBar: AppBar(
         backgroundColor: const Color(0xFF006C4E),
-        title: const Text("Dompet", style: TextStyle(color: Colors.white)),
+        title: const Text(
+          "Dompet",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       ),
       body: semuaDompet.isEmpty
           ? _buildEmpty()

@@ -171,7 +171,11 @@ class _ProfilPageState extends State<ProfilPage> {
                 children: [
                   const Text(
                     "Profil",
-                    style: TextStyle(color: Colors.white, fontSize: 16),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 23,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Center(

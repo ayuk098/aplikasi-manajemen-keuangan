@@ -23,7 +23,6 @@ class _KategoriPageState extends State<KategoriPage> {
   void initState() {
     super.initState();
 
-    // PENTING → buat default kategori hanya jika belum ada
     Future.microtask(() {
       Provider.of<KategoriController>(
         context,
@@ -45,7 +44,10 @@ class _KategoriPageState extends State<KategoriPage> {
         backgroundColor: primary,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: const Text("Kategori"),
+        title: const Text(
+          "Kategori",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       ),
 
       floatingActionButton: FloatingActionButton(
@@ -61,7 +63,6 @@ class _KategoriPageState extends State<KategoriPage> {
 
       body: Column(
         children: [
-          // ===================== HEADER TAB =====================
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -87,7 +88,6 @@ class _KategoriPageState extends State<KategoriPage> {
             ),
           ),
 
-          // ===================== LIST KATEGORI =====================
           Expanded(
             child: filteredKategori.isEmpty
                 ? const Center(
@@ -213,7 +213,6 @@ class _KategoriPageState extends State<KategoriPage> {
     );
   }
 
-  // ===================== TAB BUTTON =====================
   Widget _tabButton(String label, String value) {
     final bool isActive = _selectedTipe == value;
 
@@ -240,10 +239,8 @@ class _KategoriPageState extends State<KategoriPage> {
     );
   }
 
-  // ===================== ICON MATCHING SUPER LENGKAP =====================
   IconData _getIconForKategori(String nama) {
     final lower = nama.toLowerCase();
-    // ===== PEMASUKAN =====
     if (lower.contains('gaji')) return Icons.payments;
     if (lower.contains('bonus')) return Icons.card_giftcard;
     if (lower.contains('proyek')) return Icons.work;
@@ -252,22 +249,17 @@ class _KategoriPageState extends State<KategoriPage> {
     if (lower.contains('invest') || lower.contains('dividen'))
       return Icons.trending_up;
     if (lower.contains('hadiah')) return Icons.emoji_events;
-
-    // ===== PENGELUARAN — MAKANAN =====
     if (lower.contains('makan') || lower.contains('kuliner'))
       return Icons.restaurant_menu;
     if (lower.contains('minum') || lower.contains('kopi'))
       return Icons.local_cafe;
     if (lower.contains('snack') || lower.contains('cemilan'))
       return Icons.icecream;
-
-    // ===== BELANJA =====
     if (lower.contains('belanja') || lower.contains('shopping'))
       return Icons.shopping_cart;
     if (lower.contains('sembako') || lower.contains('kebutuhan'))
       return Icons.local_grocery_store;
 
-    // ===== TRANSPORT =====
     if (lower.contains('transport') || lower.contains('angkut'))
       return Icons.directions_car;
     if (lower.contains('bensin') || lower.contains('fuel'))
@@ -277,53 +269,37 @@ class _KategoriPageState extends State<KategoriPage> {
         lower.contains('grab'))
       return Icons.motorcycle;
     if (lower.contains('parkir')) return Icons.local_parking;
-
-    // ===== KESEHATAN =====
     if (lower.contains('kesehatan')) return Icons.local_hospital;
     if (lower.contains('obat')) return Icons.medical_services;
 
-    // ===== PENDIDIKAN =====
     if (lower.contains('pendidikan') ||
         lower.contains('kuliah') ||
         lower.contains('sekolah'))
       return Icons.school;
     if (lower.contains('buku')) return Icons.book;
-
-    // ===== RUMAH & UTILITAS =====
     if (lower.contains('listrik')) return Icons.bolt;
     if (lower.contains('air')) return Icons.water_drop;
     if (lower.contains('wifi') || lower.contains('internet')) return Icons.wifi;
     if (lower.contains('sewa') || lower.contains('kontrakan'))
       return Icons.home_work;
 
-    // ===== HIBURAN =====
     if (lower.contains('hiburan')) return Icons.movie;
     if (lower.contains('game')) return Icons.sports_esports;
     if (lower.contains('musik') || lower.contains('music'))
       return Icons.music_note;
     if (lower.contains('nonton') || lower.contains('bioskop'))
       return Icons.local_movies;
-
-    // ===== KEUANGAN =====
     if (lower.contains('tabung')) return Icons.savings;
     if (lower.contains('utang') || lower.contains('pinjam'))
       return Icons.request_quote;
     if (lower.contains('asuransi')) return Icons.verified_user;
-
-    // ===== SOSIAL =====
     if (lower.contains('donasi') || lower.contains('amal'))
       return Icons.volunteer_activism;
     if (lower.contains('kado')) return Icons.card_giftcard;
-
-    // ===== HOBI =====
     if (lower.contains('hobi')) return Icons.palette;
     if (lower.contains('olahraga')) return Icons.fitness_center;
-
-    // ===== KENDARAAN =====
     if (lower.contains('servis')) return Icons.build;
     if (lower.contains('sparepart')) return Icons.car_repair;
-
-    // ===== PERAWATAN DIRI =====
     if (lower.contains('skincare') ||
         lower.contains('perawatan') ||
         lower.contains('kosmetik'))
@@ -332,7 +308,6 @@ class _KategoriPageState extends State<KategoriPage> {
     if (lower.contains('fashion') || lower.contains('kostum'))
       return Icons.checkroom;
 
-    // DEFAULT
     return Icons.category;
   }
 }
