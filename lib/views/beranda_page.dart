@@ -84,15 +84,7 @@ class _BerandaPageState extends State<BerandaPage> {
         foregroundColor: Colors.white,
         elevation: 0,
         title: const Text("Beranda"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              auth.logout();
-              Navigator.pushReplacementNamed(context, "/login");
-            },
-          ),
-        ],
+        actions: [],
       ),
 
       floatingActionButton: FloatingActionButton(
