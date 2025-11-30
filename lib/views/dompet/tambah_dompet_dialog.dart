@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/dompet_controller.dart';
-import '../../controllers/auth_controller.dart'; // 1. Import AuthController
+import '../../controllers/currency_controller.dart';
 
 class TambahDompetDialog extends StatefulWidget {
   const TambahDompetDialog({super.key});
@@ -16,6 +16,64 @@ class _TambahDompetDialogState extends State<TambahDompetDialog> {
   final saldoC = TextEditingController(text: "0");
   final _formKey = GlobalKey<FormState>();
 
+  bool _isFormatting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    saldoC.addListener(() {
+      if (_isFormatting) return;
+      _isFormatting = true;
+
+      final currencyC = Provider.of<CurrencyController>(context, listen: false);
+      final selected = currencyC.selectedCurrency;
+
+      String raw = saldoC.text;
+
+      if (selected == 'IDR') {
+        raw = raw.replaceAll(RegExp(r'[^0-9]'), '');
+        if (raw.isEmpty) {
+          saldoC.text = '0';
+          saldoC.selection = TextSelection.collapsed(
+            offset: saldoC.text.length,
+          );
+          _isFormatting = false;
+          return;
+        }
+        final number = double.tryParse(raw) ?? 0;
+        final formatted = currencyC.formatCurrency(number);
+        saldoC.value = TextEditingValue(
+          text: formatted,
+          selection: TextSelection.collapsed(offset: formatted.length),
+        );
+      } else {
+        raw = raw.replaceAll(RegExp(r'[^0-9.]'), '');
+        final parts = raw.split('.');
+        if (parts.length > 2) {
+          raw = parts.sublist(0, 2).join('.');
+        }
+
+        if (raw.isEmpty || raw == '.') {
+          saldoC.text = '0';
+          saldoC.selection = TextSelection.collapsed(
+            offset: saldoC.text.length,
+          );
+          _isFormatting = false;
+          return;
+        }
+
+        final number = double.tryParse(raw) ?? 0;
+        final formatted = currencyC.formatCurrency(number);
+        saldoC.value = TextEditingValue(
+          text: formatted,
+          selection: TextSelection.collapsed(offset: formatted.length),
+        );
+      }
+
+      _isFormatting = false;
+    });
+  }
+
   @override
   void dispose() {
     namaC.dispose();
@@ -23,38 +81,13 @@ class _TambahDompetDialogState extends State<TambahDompetDialog> {
     super.dispose();
   }
 
-  // 2. Helper Simbol Mata Uang
-  String _getSymbol(String currencyCode) {
-    switch (currencyCode) {
-      case 'USD':
-        return '\$';
-      case 'EUR':
-        return '€';
-      case 'SGD':
-        return 'S\$';
-      case 'JPY':
-        return '¥';
-      case 'MYR':
-        return 'RM';
-      case 'AUD':
-        return 'A\$';
-      case 'IDR':
-      default:
-        return 'Rp';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final dompetController = Provider.of<DompetController>(context);
-
-    // 3. AMBIL DATA AUTH UNTUK SIMBOL & RATE
-    final authC = Provider.of<AuthController>(context);
-    final String currencySymbol = _getSymbol(authC.selectedCurrency);
+    final dompetC = Provider.of<DompetController>(context);
+    final currencyC = Provider.of<CurrencyController>(context);
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      elevation: 0,
       backgroundColor: Colors.transparent,
       child: SingleChildScrollView(
         child: Container(
@@ -62,98 +95,38 @@ class _TambahDompetDialogState extends State<TambahDompetDialog> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF006C4E).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.add_circle_outline,
-                      color: Color(0xFF006C4E),
-                      size: 28,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      "Tambah Dompet Baru",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF006C4E),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 8),
               const Text(
-                "Buat dompet baru untuk mengelola keuangan Anda",
-                style: TextStyle(color: Colors.grey, fontSize: 14),
+                "Tambah Dompet Baru",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF006C4E),
+                ),
               ),
+              const SizedBox(height: 20),
 
-              const SizedBox(height: 25),
-
-              // Form
               Form(
                 key: _formKey,
                 child: Column(
                   children: [
+                    //nama dompet
                     TextFormField(
                       controller: namaC,
-                      style: const TextStyle(fontSize: 16),
                       decoration: InputDecoration(
                         labelText: "Nama Dompet",
-                        labelStyle: const TextStyle(color: Colors.grey),
-                        hintText: "Contoh: Dompet Utama, Tabungan, dll.",
-                        hintStyle: TextStyle(
-                          color: Colors.grey[400],
-                          fontSize: 14,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.grey),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFF006C4E),
-                          ),
-                        ),
                         filled: true,
                         fillColor: Colors.grey[50],
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 16,
-                        ),
-                        prefixIcon: const Icon(
-                          Icons.account_balance_wallet,
-                          color: Colors.grey,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Nama dompet tidak boleh kosong';
-                        }
-                        if (value.length < 2) {
-                          return 'Nama dompet minimal 2 karakter';
+                      validator: (val) {
+                        if (val == null || val.isEmpty) {
+                          return "Nama dompet tidak boleh kosong";
                         }
                         return null;
                       },
@@ -161,54 +134,32 @@ class _TambahDompetDialogState extends State<TambahDompetDialog> {
 
                     const SizedBox(height: 20),
 
+                    //saldo awal
                     TextFormField(
                       controller: saldoC,
-                      style: const TextStyle(fontSize: 16),
-                      keyboardType: TextInputType.number,
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       decoration: InputDecoration(
                         labelText: "Saldo Awal",
-                        labelStyle: const TextStyle(color: Colors.grey),
-                        hintText: "0",
-                        hintStyle: TextStyle(
-                          color: Colors.grey[400],
-                          fontSize: 14,
-                        ),
-                        // 4. GUNAKAN SIMBOL DINAMIS
-                        prefixText: "$currencySymbol ",
-                        prefixStyle: const TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.w500,
-                          fontSize: 16,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.grey),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFF006C4E),
-                          ),
-                        ),
                         filled: true,
                         fillColor: Colors.grey[50],
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 16,
-                        ),
-                        prefixIcon: const Icon(
-                          Icons.attach_money,
-                          color: Colors.grey,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Saldo tidak boleh kosong';
                         }
-                        if (double.tryParse(value.replaceAll(',', '')) ==
-                            null) {
+                        
+                        final cleaned = value.replaceAll(
+                          RegExp(r'[^0-9.]'),
+                          '',
+                        );
+                        if (cleaned.isEmpty) return 'Masukkan angka yang valid';
+                        if (double.tryParse(cleaned) == null)
                           return 'Masukkan angka yang valid';
-                        }
                         return null;
                       },
                     ),
@@ -218,90 +169,62 @@ class _TambahDompetDialogState extends State<TambahDompetDialog> {
 
               const SizedBox(height: 30),
 
-              // Actions
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        side: const BorderSide(color: Colors.grey),
-                      ),
-                      child: const Text(
-                        "Batal",
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                        ),
-                      ),
+                      child: const Text("Batal"),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          // 5. LOGIKA KONVERSI SIMPAN
-                          // Ambil input user (misal 100 USD)
-                          double inputAmount =
-                              double.tryParse(
-                                saldoC.text.replaceAll(',', ''),
-                              ) ??
-                              0;
-
-                          // Kembalikan ke IDR sebelum disimpan (100 / rate = IDR Asli)
-                          double finalSaldoIDR =
-                              inputAmount / authC.selectedRate;
-
-                          dompetController.tambahDompet(
-                            namaC.text.trim(),
-                            finalSaldoIDR, // Simpan sebagai IDR
-                          );
-                          Navigator.pop(context);
-
-                          // Show success message
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text(
-                                'Dompet berhasil ditambahkan!',
-                              ),
-                              backgroundColor: const Color(0xFF006C4E),
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
-                        }
-                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF006C4E),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 2,
                       ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.check, size: 20, color: Colors.white),
-                          SizedBox(width: 8),
-                          Text(
-                            "Simpan",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
+                      onPressed: () {
+                        if (!_formKey.currentState!.validate()) return;
+                        final selected = currencyC.selectedCurrency;
+                        String rawText = saldoC.text;
+
+                        double inputValueInSelectedCurrency = 0;
+
+                        if (selected == 'IDR') {
+                          final rawDigits = rawText.replaceAll(
+                            RegExp(r'[^0-9]'),
+                            '',
+                          );
+                          inputValueInSelectedCurrency =
+                              double.tryParse(rawDigits) ?? 0;
+                        } else {
+                          final rawNum = rawText.replaceAll(
+                            RegExp(r'[^0-9.]'),
+                            '',
+                          );
+                          inputValueInSelectedCurrency =
+                              double.tryParse(rawNum) ?? 0;
+                        }
+
+                        final rate = currencyC.selectedRate;
+                        double saldoIDR = rate != 0
+                            ? (inputValueInSelectedCurrency / rate)
+                            : 0;
+
+                        dompetC.tambahDompet(namaC.text.trim(), saldoIDR);
+
+                        Navigator.pop(context);
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Dompet berhasil ditambahkan!"),
+                            backgroundColor: Color(0xFF006C4E),
                           ),
-                        ],
+                        );
+                      },
+                      child: const Text(
+                        "Simpan",
+                        style: TextStyle(color: Colors.white),
                       ),
                     ),
                   ),

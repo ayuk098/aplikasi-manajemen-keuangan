@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import '../../controllers/dompet_controller.dart';
-import '../../controllers/auth_controller.dart';
+import '../../controllers/currency_controller.dart'; 
 import '../../models/dompet_model.dart';
 
 import 'tambah_dompet_dialog.dart';
@@ -14,7 +13,7 @@ class DompetPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dompetController = Provider.of<DompetController>(context);
-    final auth = Provider.of<AuthController>(context);
+    final currency = Provider.of<CurrencyController>(context); 
 
     final semuaDompet = dompetController.semuaDompet;
 
@@ -34,18 +33,15 @@ class DompetPage extends StatelessWidget {
         backgroundColor: const Color(0xFF006C4E),
         title: const Text(
           "Dompet",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
       ),
       body: semuaDompet.isEmpty
           ? _buildEmpty()
-          : _buildList(semuaDompet, dompetController, auth, context),
+          : _buildList(semuaDompet, dompetController, currency, context),
     );
   }
 
-  // ========================
-  // EMPTY STATE
-  // ========================
   Widget _buildEmpty() {
     return Center(
       child: Column(
@@ -71,13 +67,11 @@ class DompetPage extends StatelessWidget {
     );
   }
 
-  // ========================
-  // LIST DOMPET
-  // ========================
+ 
   Widget _buildList(
     List<DompetModel> data,
     DompetController controller,
-    AuthController auth,
+    CurrencyController currency, 
     BuildContext context,
   ) {
     return ListView.builder(
@@ -108,7 +102,7 @@ class DompetPage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text("Saldo: ${auth.formatFromIdr(d.saldoAwal)}"),
+                    Text("Saldo: ${currency.formatFromIdr(d.saldoAwal)}"),
                   ],
                 ),
               ),

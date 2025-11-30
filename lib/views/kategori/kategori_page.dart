@@ -46,7 +46,7 @@ class _KategoriPageState extends State<KategoriPage> {
         elevation: 0,
         title: const Text(
           "Kategori",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
       ),
 

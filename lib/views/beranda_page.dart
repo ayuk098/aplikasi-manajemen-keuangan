@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
-import '../controllers/auth_controller.dart';
 import '../controllers/transaksi_controller.dart';
+import '../controllers/currency_controller.dart';
 import '../models/transaksi_model.dart';
 
 class BerandaPage extends StatefulWidget {
@@ -35,12 +35,7 @@ class _BerandaPageState extends State<BerandaPage> {
     DateTime monday = selectedDate.subtract(
       Duration(days: selectedDate.weekday - 1),
     );
-
-    List<DateTime> weekDates = [];
-    for (int i = 0; i < 7; i++) {
-      weekDates.add(monday.add(Duration(days: i)));
-    }
-    return weekDates;
+    return List.generate(7, (i) => monday.add(Duration(days: i)));
   }
 
   String _getMonthYear(DateTime date) {
@@ -61,7 +56,6 @@ class _BerandaPageState extends State<BerandaPage> {
     return '${monthNames[date.month - 1]} ${date.year}';
   }
 
-  // Format nama hari manual
   String _getDayName(DateTime date) {
     const dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
     return dayNames[date.weekday % 7];
@@ -70,7 +64,7 @@ class _BerandaPageState extends State<BerandaPage> {
   @override
   Widget build(BuildContext context) {
     final transaksiC = Provider.of<TransaksiController>(context);
-    final auth = Provider.of<AuthController>(context);
+    final currency = Provider.of<CurrencyController>(context);
     final weekDates = _getWeekDates(_selectedDate);
 
     if (!_isDateFormatInitialized) {
@@ -83,29 +77,21 @@ class _BerandaPageState extends State<BerandaPage> {
         backgroundColor: _primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: const Text("Beranda"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              auth.logout();
-              Navigator.pushReplacementNamed(context, "/login");
-            },
-          ),
-        ],
+        title: const Text(
+          "Beranda",
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
       ),
 
       floatingActionButton: FloatingActionButton(
         backgroundColor: _primaryColor,
-        onPressed: () {
-          Navigator.pushNamed(context, "/tambahTransaksi");
-        },
+        onPressed: () => Navigator.pushNamed(context, "/tambahTransaksi"),
         child: const Icon(Icons.add, color: Colors.white),
       ),
 
       body: Column(
         children: [
-          //kalender
+          // Kalender minggu
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             decoration: BoxDecoration(
@@ -160,10 +146,7 @@ class _BerandaPageState extends State<BerandaPage> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 16),
-
-                // Hari dalam minggu
                 Row(
                   children: weekDates
                       .map(
@@ -180,11 +163,9 @@ class _BerandaPageState extends State<BerandaPage> {
                               ),
                               const SizedBox(height: 8),
                               GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _selectedDate = date;
-                                  });
-                                },
+                                onTap: () => setState(() {
+                                  _selectedDate = date;
+                                }),
                                 child: Container(
                                   width: 36,
                                   height: 36,
@@ -233,16 +214,6 @@ class _BerandaPageState extends State<BerandaPage> {
 
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
             child: Column(
               children: [
                 // Sisa Uang
@@ -259,14 +230,11 @@ class _BerandaPageState extends State<BerandaPage> {
                     children: [
                       const Text(
                         "Sisa uang kamu",
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Color.fromARGB(255, 46, 45, 45),
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.black54),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        auth.formatFromIdr(transaksiC.sisaUang),
+                        currency.formatFromIdr(transaksiC.sisaUang),
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -276,10 +244,8 @@ class _BerandaPageState extends State<BerandaPage> {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 16),
-
-                // Pemasukan dan Pengeluaran
+                // Pemasukan & Pengeluaran
                 Row(
                   children: [
                     Expanded(
@@ -288,7 +254,7 @@ class _BerandaPageState extends State<BerandaPage> {
                         transaksiC.totalPemasukan,
                         Colors.green,
                         Icons.arrow_upward,
-                        auth,
+                        currency,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -298,7 +264,7 @@ class _BerandaPageState extends State<BerandaPage> {
                         transaksiC.totalPengeluaran,
                         Colors.red,
                         Icons.arrow_downward,
-                        auth,
+                        currency,
                       ),
                     ),
                   ],
@@ -313,11 +279,7 @@ class _BerandaPageState extends State<BerandaPage> {
               children: [
                 Text(
                   "Transaksi",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -333,7 +295,6 @@ class _BerandaPageState extends State<BerandaPage> {
                           image: AssetImage('assets/images/saku.png'),
                           width: 150,
                           height: 150,
-                          fit: BoxFit.contain,
                         ),
                         SizedBox(height: 16),
                         Text(
@@ -352,7 +313,7 @@ class _BerandaPageState extends State<BerandaPage> {
                         context,
                         transaksi,
                         transaksiC,
-                        auth,
+                        currency,
                       );
                     },
                   ),
@@ -362,21 +323,12 @@ class _BerandaPageState extends State<BerandaPage> {
     );
   }
 
-  String _formatCurrency(double value) {
-    return value
-        .toStringAsFixed(0)
-        .replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match m) => '${m[1]}.',
-        );
-  }
-
   Widget _infoCard(
     String title,
     double value,
     Color color,
     IconData icon,
-    AuthController auth,
+    CurrencyController currency,
   ) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -400,7 +352,7 @@ class _BerandaPageState extends State<BerandaPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            auth.formatFromIdr(value),
+            currency.formatFromIdr(value),
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
@@ -416,7 +368,7 @@ class _BerandaPageState extends State<BerandaPage> {
     BuildContext context,
     TransaksiModel t,
     TransaksiController transaksiC,
-    AuthController auth,
+    CurrencyController currency,
   ) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -450,7 +402,6 @@ class _BerandaPageState extends State<BerandaPage> {
               size: 20,
             ),
           ),
-
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -461,17 +412,13 @@ class _BerandaPageState extends State<BerandaPage> {
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
-                    color: Colors.black87,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-
                 const SizedBox(height: 4),
-
-                // Jumlah
                 Text(
-                  auth.formatFromIdr(t.jumlah),
+                  currency.formatFromIdr(t.jumlah),
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -481,9 +428,7 @@ class _BerandaPageState extends State<BerandaPage> {
               ],
             ),
           ),
-
           const SizedBox(width: 12),
-
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -491,28 +436,27 @@ class _BerandaPageState extends State<BerandaPage> {
                 width: 36,
                 height: 36,
                 child: IconButton(
-                  onPressed: () {
-                    Navigator.pushNamed(
-                      context,
-                      "/editTransaksi",
-                      arguments: t,
-                    );
-                  },
+                  onPressed: () => Navigator.pushNamed(
+                    context,
+                    "/editTransaksi",
+                    arguments: t,
+                  ),
                   icon: const Icon(Icons.edit, color: Colors.blue, size: 18),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),
               ),
-
               const SizedBox(width: 8),
-
               SizedBox(
                 width: 36,
                 height: 36,
                 child: IconButton(
-                  onPressed: () {
-                    _showDeleteConfirmationDialog(context, t, transaksiC, auth);
-                  },
+                  onPressed: () => _showDeleteConfirmationDialog(
+                    context,
+                    t,
+                    transaksiC,
+                    currency,
+                  ),
                   icon: const Icon(Icons.delete, color: Colors.red, size: 18),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -529,13 +473,12 @@ class _BerandaPageState extends State<BerandaPage> {
     BuildContext context,
     TransaksiModel transaksi,
     TransaksiController transaksiC,
-    AuthController auth,
+    CurrencyController currency,
   ) {
     showDialog(
       context: context,
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        elevation: 0,
         backgroundColor: Colors.transparent,
         child: Container(
           padding: const EdgeInsets.all(24),
@@ -565,10 +508,7 @@ class _BerandaPageState extends State<BerandaPage> {
                   size: 32,
                 ),
               ),
-
               const SizedBox(height: 16),
-
-              // Judul
               const Text(
                 "Hapus Transaksi?",
                 style: TextStyle(
@@ -578,109 +518,12 @@ class _BerandaPageState extends State<BerandaPage> {
                 ),
                 textAlign: TextAlign.center,
               ),
-
               const SizedBox(height: 8),
-
-              // Deskripsi
               Text(
                 "Transaksi yang dihapus tidak dapat dikembalikan",
                 style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 textAlign: TextAlign.center,
               ),
-
-              const SizedBox(height: 20),
-
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: transaksi.tipe == "pemasukan"
-                            ? Colors.green.withOpacity(0.1)
-                            : Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        transaksi.tipe == "pemasukan"
-                            ? Icons.arrow_upward
-                            : Icons.arrow_downward,
-                        color: transaksi.tipe == "pemasukan"
-                            ? Colors.green
-                            : Colors.red,
-                        size: 20,
-                      ),
-                    ),
-
-                    const SizedBox(width: 12),
-
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            transaksi.deskripsi,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w500,
-                              fontSize: 16,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            auth.formatFromIdr(transaksi.jumlah),
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: transaksi.tipe == "pemasukan"
-                                  ? Colors.green
-                                  : Colors.red,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: transaksi.tipe == "pemasukan"
-                            ? Colors.green.withOpacity(0.1)
-                            : Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: transaksi.tipe == "pemasukan"
-                              ? Colors.green.withOpacity(0.3)
-                              : Colors.red.withOpacity(0.3),
-                        ),
-                      ),
-                      child: Text(
-                        transaksi.tipe == "pemasukan" ? "MASUK" : "KELUAR",
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: transaksi.tipe == "pemasukan"
-                              ? Colors.green
-                              : Colors.red,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
               const SizedBox(height: 24),
               Row(
                 children: [
@@ -704,9 +547,7 @@ class _BerandaPageState extends State<BerandaPage> {
                       ),
                     ),
                   ),
-
                   const SizedBox(width: 12),
-
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {

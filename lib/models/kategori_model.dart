@@ -11,15 +11,15 @@ class KategoriModel {
   String nama;
 
   @HiveField(2)
-  String tipe; // pemasukan / pengeluaran
+  String tipe; 
 
-  @HiveField(3) // <<< FIELD BARU
-  String userId; // Kunci pembeda antar pengguna
+  @HiveField(3) 
+  String userId; 
 
   KategoriModel({
     required this.id,
     required this.nama,
     required this.tipe,
-    required this.userId, // <<< TAMBAH PADA KONSTRUKTOR
+    required this.userId, 
   });
 }

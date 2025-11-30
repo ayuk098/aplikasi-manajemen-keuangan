@@ -19,7 +19,7 @@ class AppRoutes {
     '/register': (_) => const RegisterPage(),
     '/success-register': (_) => const RegisterSuccessPage(),
 
-    '/welcome': (_) => const WelcomePage(),   // ⬅️ NEW
+    '/welcome': (_) => const WelcomePage(),
 
     '/beranda': (_) => const BerandaPage(),
     '/main': (_) => const MainNavigation(),

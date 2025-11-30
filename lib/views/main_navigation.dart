@@ -69,7 +69,7 @@ class _MainNavigationState extends State<MainNavigation> {
             BottomNavigationBarItem(
               icon: Icon(Icons.bar_chart_outlined),
               activeIcon: Icon(Icons.bar_chart),
-              label: "Grafik",
+              label: "Analisis",
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.person_outlined),

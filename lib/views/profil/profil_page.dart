@@ -2,8 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-
 import '../../controllers/auth_controller.dart';
+import '../../controllers/currency_controller.dart';
 import '../../services/currency_service.dart';
 import 'developer_page.dart';
 
@@ -18,12 +18,9 @@ class _ProfilPageState extends State<ProfilPage> {
   final Color primaryColor = const Color(0xFF006C4E);
   final ImagePicker _picker = ImagePicker();
 
-  // ====== FOTO PROFIL ======
   File? _localImage;
-
   Future<void> _pickImage(ImageSource source) async {
     final authC = Provider.of<AuthController>(context, listen: false);
-
     final picked = await _picker.pickImage(source: source, imageQuality: 70);
 
     if (picked == null) return;
@@ -32,7 +29,6 @@ class _ProfilPageState extends State<ProfilPage> {
       _localImage = File(picked.path);
     });
 
-    // simpan ke Hive
     await authC.updatePhoto(picked.path);
   }
 
@@ -70,10 +66,9 @@ class _ProfilPageState extends State<ProfilPage> {
     );
   }
 
-  // ====== PENGATURAN MATA UANG APP ======
   bool _isCurrencyExpanded = false;
   bool _isLoadingCurrency = false;
-  String _selectedCurrency = "USD";
+  String _selectedCurrency = "IDR";
 
   final List<String> _currencies = [
     "IDR",
@@ -88,37 +83,26 @@ class _ProfilPageState extends State<ProfilPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Sinkronkan _selectedCurrency dengan auth.selectedCurrency
-    final authC = Provider.of<AuthController>(context);
-    _selectedCurrency = authC.selectedCurrency;
+    final currencyC = Provider.of<CurrencyController>(context, listen: false);
+    _selectedCurrency = currencyC.selectedCurrency;
   }
 
-  Future<void> _setAppCurrency(String currency, AuthController authC) async {
+  Future<void> _setAppCurrency(
+    String currency,
+    CurrencyController currencyC,
+  ) async {
     setState(() {
       _isLoadingCurrency = true;
       _selectedCurrency = currency;
     });
 
     try {
-      if (currency == "IDR") {
-        // default: 1 IDR = 1 IDR
-        await authC.updateCurrency("IDR", 1.0);
-      } else {
-        // ambil rate dari CurrencyService
-        final rate = await CurrencyService.getRate(currency);
-
-        if (rate == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("Gagal mengambil kurs $currency"),
-              backgroundColor: Colors.red,
-            ),
-          );
-          setState(() => _isLoadingCurrency = false);
-          return;
-        }
-        await authC.updateCurrency(currency, rate);
+      double rate = 1.0;
+      if (currency != "IDR") {
+        rate = await CurrencyService.getRate(currency) ?? 1.0;
       }
+
+      await currencyC.updateCurrency(currency, rate);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -141,6 +125,7 @@ class _ProfilPageState extends State<ProfilPage> {
   @override
   Widget build(BuildContext context) {
     final authC = Provider.of<AuthController>(context);
+    final currencyC = Provider.of<CurrencyController>(context);
     final user = authC.currentUser;
     final topPadding = MediaQuery.of(context).padding.top;
 
@@ -155,7 +140,6 @@ class _ProfilPageState extends State<ProfilPage> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // ================= HEADER HIJAU =================
             Container(
               width: double.infinity,
               padding: EdgeInsets.fromLTRB(20, topPadding + 16, 20, 24),
@@ -171,7 +155,11 @@ class _ProfilPageState extends State<ProfilPage> {
                 children: [
                   const Text(
                     "Profil",
-                    style: TextStyle(color: Colors.white, fontSize: 22),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Center(
@@ -221,7 +209,6 @@ class _ProfilPageState extends State<ProfilPage> {
                           ],
                         ),
                         const SizedBox(height: 12),
-
                         Text(
                           displayName,
                           style: const TextStyle(
@@ -230,7 +217,6 @@ class _ProfilPageState extends State<ProfilPage> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-
                         if (user?.email != null)
                           Text(
                             user!.email,
@@ -248,14 +234,11 @@ class _ProfilPageState extends State<ProfilPage> {
 
             const SizedBox(height: 30),
 
-            // ================= MENU =================
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 children: [
-                  // ===========================================================
-                  //     CARD MATA UANG APLIKASI (USER CUMA PILIH CURRENCY)
-                  // ===========================================================
+                  // MATA UANG
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(
@@ -269,7 +252,6 @@ class _ProfilPageState extends State<ProfilPage> {
                     ),
                     child: Column(
                       children: [
-                        // HEADER CARD
                         InkWell(
                           onTap: () {
                             setState(() {
@@ -300,7 +282,6 @@ class _ProfilPageState extends State<ProfilPage> {
                           const SizedBox(height: 10),
                           const Divider(height: 1),
                           const SizedBox(height: 10),
-
                           Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
@@ -312,8 +293,6 @@ class _ProfilPageState extends State<ProfilPage> {
                             ),
                           ),
                           const SizedBox(height: 8),
-
-                          // Dropdown mata uang
                           Container(
                             width: double.infinity,
                             padding: const EdgeInsets.symmetric(
@@ -338,15 +317,13 @@ class _ProfilPageState extends State<ProfilPage> {
                                     .toList(),
                                 onChanged: (val) {
                                   if (val != null && !_isLoadingCurrency) {
-                                    _setAppCurrency(val, authC);
+                                    _setAppCurrency(val, currencyC);
                                   }
                                 },
                               ),
                             ),
                           ),
-
                           const SizedBox(height: 10),
-
                           if (_isLoadingCurrency)
                             Row(
                               children: const [
@@ -368,7 +345,7 @@ class _ProfilPageState extends State<ProfilPage> {
                             Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                "Mata uang aktif: ${authC.selectedCurrency}",
+                                "Mata uang aktif: ${currencyC.selectedCurrency}",
                                 style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,
@@ -382,7 +359,6 @@ class _ProfilPageState extends State<ProfilPage> {
 
                   const SizedBox(height: 12),
 
-                  // ================= DEVELOPER =================
                   MenuCard(
                     primaryColor: primaryColor,
                     icon: Icons.info_outline,
@@ -398,19 +374,22 @@ class _ProfilPageState extends State<ProfilPage> {
 
                   const SizedBox(height: 12),
 
-                  // ================= PENGATURAN =================
                   MenuCard(
                     primaryColor: primaryColor,
                     icon: Icons.logout,
                     label: "Logout",
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
-                      final auth = Provider.of<AuthController>(context, listen: false);
-
+                      final auth = Provider.of<AuthController>(
+                        context,
+                        listen: false,
+                      );
                       showDialog(
                         context: context,
                         builder: (context) => Dialog(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
                           backgroundColor: Colors.transparent,
                           child: Container(
                             padding: const EdgeInsets.all(24),
@@ -428,11 +407,10 @@ class _ProfilPageState extends State<ProfilPage> {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                // ICON HIJAU
                                 Container(
                                   padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF006C4E).withOpacity(0.1),
+                                    color: primaryColor.withOpacity(0.1),
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(
@@ -441,10 +419,7 @@ class _ProfilPageState extends State<ProfilPage> {
                                     color: Color(0xFF006C4E),
                                   ),
                                 ),
-
                                 const SizedBox(height: 18),
-
-                                // JUDUL
                                 const Text(
                                   "Keluar dari Akun?",
                                   style: TextStyle(
@@ -454,10 +429,7 @@ class _ProfilPageState extends State<ProfilPage> {
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
-
                                 const SizedBox(height: 8),
-
-                                // DESKRIPSI
                                 const Text(
                                   "Apakah kamu yakin ingin logout dari aplikasi?",
                                   style: TextStyle(
@@ -466,21 +438,24 @@ class _ProfilPageState extends State<ProfilPage> {
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
-
                                 const SizedBox(height: 24),
-
                                 Row(
                                   children: [
-                                    // BUTTON BATAL
                                     Expanded(
                                       child: OutlinedButton(
                                         onPressed: () => Navigator.pop(context),
                                         style: OutlinedButton.styleFrom(
-                                          side: BorderSide(color: Colors.grey.withOpacity(0.4)),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(12),
+                                          side: BorderSide(
+                                            color: Colors.grey.withOpacity(0.4),
                                           ),
-                                          padding: const EdgeInsets.symmetric(vertical: 12),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 12,
+                                          ),
                                         ),
                                         child: const Text(
                                           "Batal",
@@ -492,26 +467,30 @@ class _ProfilPageState extends State<ProfilPage> {
                                         ),
                                       ),
                                     ),
-
                                     const SizedBox(width: 12),
-
-                                    // BUTTON LOGOUT
                                     Expanded(
                                       child: ElevatedButton(
                                         onPressed: () {
                                           Navigator.pop(context);
                                           auth.logout();
-                                          Navigator.pushReplacementNamed(context, "/login");
+                                          Navigator.pushReplacementNamed(
+                                            context,
+                                            "/login",
+                                          );
                                         },
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: const Color(0xFF006C4E),
+                                          backgroundColor: primaryColor,
                                           foregroundColor: Colors.white,
                                           shadowColor: Colors.black45,
                                           elevation: 2,
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
                                           ),
-                                          padding: const EdgeInsets.symmetric(vertical: 12),
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 12,
+                                          ),
                                         ),
                                         child: const Text(
                                           "Logout",
@@ -530,9 +509,7 @@ class _ProfilPageState extends State<ProfilPage> {
                         ),
                       );
                     },
-
                   ),
-
                 ],
               ),
             ),
@@ -544,10 +521,6 @@ class _ProfilPageState extends State<ProfilPage> {
     );
   }
 }
-
-// =======================================================================
-// =========================== MENU CARD =================================
-// =======================================================================
 
 class MenuCard extends StatelessWidget {
   final Color primaryColor;

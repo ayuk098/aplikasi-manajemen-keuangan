@@ -2,19 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
-
 import 'models/user_model.dart';
 import 'models/kategori_model.dart';
 import 'models/dompet_model.dart';
 import 'models/transaksi_model.dart';
-
 import 'services/hive_service.dart';
 import 'services/notification_service.dart';
-
 import 'controllers/auth_controller.dart';
 import 'controllers/transaksi_controller.dart';
 import 'controllers/kategori_controller.dart';
 import 'controllers/dompet_controller.dart';
+import 'controllers/currency_controller.dart';
 
 import 'routes/app_routes.dart';
 import 'views/landing_screen.dart';
@@ -22,7 +20,6 @@ import 'views/landing_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // INIT HIVE
   await Hive.initFlutter();
   Hive.registerAdapter(UserModelAdapter());
   Hive.registerAdapter(KategoriModelAdapter());
@@ -30,11 +27,7 @@ void main() async {
   Hive.registerAdapter(TransaksiModelAdapter());
 
   await HiveService.init();
-
-  // INIT NOTIFICATION SERVICE
   await NotificationService.init();
-
-  // WAJIB UNTUK ANDROID 13+
   await Permission.notification.request();
 
   runApp(const MyApp());
@@ -52,8 +45,7 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthController()),
-
-        // DOMPET
+        ChangeNotifierProvider(create: (_) => CurrencyController()),
         ChangeNotifierProxyProvider<AuthController, DompetController>(
           create: (context) {
             final userId = _getCurrentUserId(
@@ -74,7 +66,7 @@ class MyApp extends StatelessWidget {
           },
         ),
 
-        // KATEGORI
+
         ChangeNotifierProxyProvider<AuthController, KategoriController>(
           create: (context) {
             final userId = _getCurrentUserId(
@@ -95,7 +87,7 @@ class MyApp extends StatelessWidget {
           },
         ),
 
-        // TRANSAKSI
+
         ChangeNotifierProxyProvider2<
           AuthController,
           DompetController,
@@ -126,15 +118,12 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Keuangan App',
-
         initialRoute: '/splash',
-
         routes: {
           '/landing': (_) => const LandingScreen(),
           '/splash': (_) => const SplashScreen(),
           ...AppRoutes.routes,
         },
-
         onGenerateRoute: AppRoutes.onGenerate,
       ),
     );

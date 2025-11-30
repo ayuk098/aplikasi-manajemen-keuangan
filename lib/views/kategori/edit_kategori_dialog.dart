@@ -93,7 +93,7 @@ class _EditKategoriDialogState extends State<EditKategoriDialog> {
                       kategoriC.editKategori(
                         widget.kategori.id, 
                         _namaC.text, 
-                        widget.kategori.tipe // Tetap gunakan tipe yang sama
+                        widget.kategori.tipe 
                       );
                       Navigator.pop(context);
                     },

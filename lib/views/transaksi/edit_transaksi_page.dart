@@ -4,7 +4,7 @@ import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
 
 import '../../controllers/transaksi_controller.dart';
-import '../../controllers/auth_controller.dart'; 
+import '../../controllers/currency_controller.dart';
 import '../../models/transaksi_model.dart';
 import '../../models/kategori_model.dart';
 import '../../models/dompet_model.dart';
@@ -33,6 +33,7 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
 
   bool _isLoading = false;
   bool _isInit = true;
+  bool _isFormatting = false;
 
   @override
   void initState() {
@@ -43,21 +44,61 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
     _kategoriId = widget.transaksi.kategoriId;
     _dompetId = widget.transaksi.dompetId;
     _tanggal = widget.transaksi.tanggal;
+
+    _jumlahC.addListener(() {
+      if (_isFormatting) return;
+      _isFormatting = true;
+
+      final currency = Provider.of<CurrencyController>(context, listen: false);
+      final selected = currency.selectedCurrency;
+
+      String current = _jumlahC.text;
+
+      if (selected == 'IDR') {
+        final raw = current.replaceAll(RegExp(r'[^0-9]'), '');
+        if (raw.isEmpty) {
+          _jumlahC.text = '';
+          _jumlahC.selection = TextSelection.collapsed(offset: 0);
+          _isFormatting = false;
+          return;
+        }
+        final number = double.tryParse(raw) ?? 0;
+        final formatted = currency.formatCurrency(number);
+        _jumlahC.value = TextEditingValue(
+          text: formatted,
+          selection: TextSelection.collapsed(offset: formatted.length),
+        );
+      } else {
+        final raw = current.replaceAll(RegExp(r'[^0-9.]'), '');
+        final parts = raw.split('.');
+        String sane = parts.length <= 1 ? raw : '${parts[0]}.${parts.sublist(1).join()}';
+        if (sane.isEmpty || sane == '.') {
+          _jumlahC.text = '';
+          _jumlahC.selection = TextSelection.collapsed(offset: 0);
+          _isFormatting = false;
+          return;
+        }
+        final number = double.tryParse(sane) ?? 0;
+        final formatted = currency.formatCurrency(number);
+        _jumlahC.value = TextEditingValue(
+          text: formatted,
+          selection: TextSelection.collapsed(offset: formatted.length),
+        );
+      }
+
+      _isFormatting = false;
+    });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_isInit) {
-      final authC = Provider.of<AuthController>(context, listen: false);
+      final currencyC =
+          Provider.of<CurrencyController>(context, listen: false);
+      double converted = currencyC.convertFromIdr(widget.transaksi.jumlah);
 
-      double convertedValue =
-          widget.transaksi.jumlah *
-          authC.selectedRate; 
-
-      _jumlahC.text = convertedValue % 1 == 0
-          ? convertedValue.toInt().toString()
-          : convertedValue.toStringAsFixed(2);
+      _jumlahC.text = currencyC.formatCurrency(converted);
 
       _isInit = false;
     }
@@ -70,35 +111,13 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
     super.dispose();
   }
 
-  String _getSymbol(String currencyCode) {
-    switch (currencyCode) {
-      case 'USD':
-        return '\$';
-      case 'EUR':
-        return '€';
-      case 'SGD':
-        return 'S\$';
-      case 'JPY':
-        return '¥';
-      case 'MYR':
-        return 'RM';
-      case 'AUD':
-        return 'A\$';
-      case 'IDR':
-      default:
-        return 'Rp';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final transaksiC = Provider.of<TransaksiController>(context);
-    final authC = Provider.of<AuthController>(context);
+    final currencyC = Provider.of<CurrencyController>(context);
 
-    final double currentRate = authC.selectedRate; 
-    final String currencyCode =
-        authC.selectedCurrency;
-    final String currencySymbol = _getSymbol(currencyCode);
+    final rawSymbol = currencyC.formatCurrency(1);
+    final currencySymbol = rawSymbol.replaceAll(RegExp(r'[0-9\.,\s]'), '');
 
     final sessionBox = Hive.box('session');
     final currentUserId = sessionBox.get('userId');
@@ -109,9 +128,8 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
         .toList();
 
     final dompetBox = Hive.box<DompetModel>('dompet');
-    final dompetFiltered = dompetBox.values
-        .where((e) => e.userId == currentUserId)
-        .toList();
+    final dompetFiltered =
+        dompetBox.values.where((e) => e.userId == currentUserId).toList();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -169,11 +187,13 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
                             isNumber: true,
                             currencySymbol: currencySymbol,
                             validator: (v) {
-                              if (v!.isEmpty) return "Jumlah wajib diisi";
-                              if (double.tryParse(v.replaceAll(',', '')) ==
-                                  null) {
-                                return "Masukkan angka yang valid";
-                              }
+                              if (v == null || v.isEmpty) return "Jumlah wajib diisi";
+                              final selected = currencyC.selectedCurrency;
+                              final cleaned = selected == 'IDR'
+                                  ? v.replaceAll(RegExp(r'[^0-9]'), '')
+                                  : v.replaceAll(RegExp(r'[^0-9.]'), '');
+                              if (cleaned.isEmpty) return "Masukkan angka yang valid";
+                              if (double.tryParse(cleaned) == null) return "Masukkan angka yang valid";
                               return null;
                             },
                           ),
@@ -190,21 +210,14 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
                               ),
                               child: Row(
                                 children: [
-                                  Icon(
-                                    Icons.calendar_today,
-                                    color: primary,
-                                    size: 20,
-                                  ),
+                                  Icon(Icons.calendar_today,
+                                      color: primary, size: 20),
                                   const SizedBox(width: 10),
-                                  Text(
-                                    DateFormat("dd/MM/yyyy").format(_tanggal),
-                                  ),
+                                  Text(DateFormat("dd/MM/yyyy").format(_tanggal)),
                                   const Spacer(),
                                   Text(
-                                    DateFormat(
-                                      'EEEE',
-                                      'id_ID',
-                                    ).format(_tanggal),
+                                    DateFormat('EEEE', 'id_ID')
+                                        .format(_tanggal),
                                     style: TextStyle(color: Colors.grey[600]),
                                   ),
                                 ],
@@ -216,9 +229,7 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
                           _label("Pilih kategori"),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 4,
-                            ),
+                                horizontal: 16, vertical: 4),
                             decoration: BoxDecoration(
                               border: Border.all(color: borderColor),
                               borderRadius: BorderRadius.circular(10),
@@ -242,57 +253,56 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
                           const SizedBox(height: 20),
 
                           _label("Pilih dompet"),
-                          if (dompetFiltered.isEmpty)
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.orange),
-                                borderRadius: BorderRadius.circular(10),
-                                color: Colors.orange[50],
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.warning,
-                                    color: Colors.orange[800],
+                          dompetFiltered.isEmpty
+                              ? Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: Colors.orange),
+                                    borderRadius: BorderRadius.circular(10),
+                                    color: Colors.orange[50],
                                   ),
-                                  const SizedBox(width: 8),
-                                  const Expanded(
-                                    child: Text(
-                                      "Belum ada dompet. Tambahkan dulu.",
-                                      style: TextStyle(color: Colors.orange),
-                                    ),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.warning,
+                                          color: Colors.orange[800]),
+                                      const SizedBox(width: 8),
+                                      const Expanded(
+                                        child: Text(
+                                          "Belum ada dompet. Tambahkan dulu.",
+                                          style:
+                                              TextStyle(color: Colors.orange),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                            )
-                          else
+                                )
+                              : Container(
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: borderColor),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Column(
+                                    children: dompetFiltered.map((d) {
+                                      double converted =
+                                          currencyC.convertFromIdr(
+                                              d.saldoAwal);
 
-                            Container(
-                              decoration: BoxDecoration(
-                                border: Border.all(color: borderColor),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Column(
-                                children: dompetFiltered.map((d) {
-                                  double convertedSaldo =
-                                      d.saldoAwal * currentRate;
-
-                                  return RadioListTile<String>(
-                                    value: d.id,
-                                    groupValue: _dompetId,
-                                    activeColor: primary,
-                                    title: Text(d.nama),
-                                    subtitle: Text(
-                                      "$currencySymbol ${NumberFormat('#,##0.##').format(convertedSaldo)}",
-                                      style: TextStyle(color: Colors.grey[600]),
-                                    ),
-                                    onChanged: (v) =>
-                                        setState(() => _dompetId = v),
-                                  );
-                                }).toList(),
-                              ),
-                            ),
+                                      return RadioListTile<String>(
+                                        value: d.id,
+                                        groupValue: _dompetId,
+                                        activeColor: primary,
+                                        title: Text(d.nama),
+                                        subtitle: Text(
+                                          currencyC.formatCurrency(converted),
+                                          style: TextStyle(
+                                              color: Colors.grey[600]),
+                                        ),
+                                        onChanged: (v) =>
+                                            setState(() => _dompetId = v),
+                                      );
+                                    }).toList(),
+                                  ),
+                                ),
 
                           const SizedBox(height: 30),
                         ],
@@ -348,20 +358,27 @@ class _EditTransaksiPageState extends State<EditTransaksiPage> {
     setState(() => _isLoading = true);
 
     try {
-      final transaksiC = Provider.of<TransaksiController>(
-        context,
-        listen: false,
-      );
-      final authC = Provider.of<AuthController>(context, listen: false);
+      final transaksiC =
+          Provider.of<TransaksiController>(context, listen: false);
+      final currencyC =
+          Provider.of<CurrencyController>(context, listen: false);
 
-      double inputAmount = double.parse(_jumlahC.text.replaceAll(',', ''));
+      final selected = currencyC.selectedCurrency;
+      final rawClean = selected == 'IDR'
+          ? _jumlahC.text.replaceAll(RegExp(r'[^0-9]'), '')
+          : _jumlahC.text.replaceAll(RegExp(r'[^0-9.]'), '');
 
-      double finalAmountIDR =
-          inputAmount / authC.selectedRate; 
+      double userValue = double.tryParse(rawClean) ?? 0;
+      double finalIDR;
+      if (selected == 'IDR') {
+        finalIDR = userValue;
+      } else {
+        finalIDR = currencyC.selectedRate != 0 ? (userValue / currencyC.selectedRate) : 0;
+      }
 
       final updated = TransaksiModel(
         id: widget.transaksi.id,
-        jumlah: finalAmountIDR,
+        jumlah: finalIDR,
         kategoriId: _kategoriId!,
         dompetId: _dompetId!,
         tanggal: _tanggal,

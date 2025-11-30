@@ -12,9 +12,9 @@ class DeveloperPage extends StatelessWidget {
       "photo": "assets/images/zeva.jpg",
     },
     {
-      "name": "Wahyu Ramadhani Manurung",
+      "name": "Wahyu Ramadani Manurung",
       "nim": "124230041",
-      "photo": "assets/images/ayu.jpeg", 
+      "photo": "assets/images/ayu.jpeg",
     },
   ];
 
@@ -43,12 +43,12 @@ class DeveloperPage extends StatelessWidget {
             ),
             child: Row(
               children: [
-                // FOTO
                 CircleAvatar(
                   radius: 32,
                   backgroundColor: Colors.grey[300],
-                  backgroundImage:
-                      dev["photo"]!.isNotEmpty ? AssetImage(dev["photo"]!) : null,
+                  backgroundImage: dev["photo"]!.isNotEmpty
+                      ? AssetImage(dev["photo"]!)
+                      : null,
                   child: dev["photo"]!.isEmpty
                       ? const Icon(Icons.person, size: 35, color: Colors.white)
                       : null,
@@ -56,7 +56,6 @@ class DeveloperPage extends StatelessWidget {
 
                 const SizedBox(width: 16),
 
-                // NAMA + NIM
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -71,10 +70,7 @@ class DeveloperPage extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         dev["nim"]!,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[700],
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                       ),
                     ],
                   ),

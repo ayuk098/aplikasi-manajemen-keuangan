@@ -23,10 +23,10 @@ class TransaksiModel {
   String deskripsi;
 
   @HiveField(6)
-  String tipe; // pemasukan / pengeluaran
+  String tipe; 
 
-  @HiveField(7) // <<< FIELD BARU
-  String userId; // Kunci pembeda antar pengguna
+  @HiveField(7) 
+  String userId; 
 
   TransaksiModel({
     required this.id,
@@ -36,7 +36,7 @@ class TransaksiModel {
     required this.tanggal,
     required this.deskripsi,
     required this.tipe,
-    required this.userId, // <<< TAMBAH PADA KONSTRUKTOR
+    required this.userId, 
   });
 }
 
@@ -48,7 +48,7 @@ extension TransaksiCopy on TransaksiModel {
     DateTime? tanggal,
     String? deskripsi,
     String? tipe,
-    // Tidak perlu copy userId
+    
   }) {
     return TransaksiModel(
       id: id,
@@ -58,7 +58,7 @@ extension TransaksiCopy on TransaksiModel {
       tanggal: tanggal ?? this.tanggal,
       deskripsi: deskripsi ?? this.deskripsi,
       tipe: tipe ?? this.tipe,
-      userId: userId, // Pastikan userId selalu dipertahankan
+      userId: userId, 
     );
   }
 }

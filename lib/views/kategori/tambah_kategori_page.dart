@@ -30,7 +30,6 @@ class _TambahKategoriDialogState extends State<TambahKategoriDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Row(
               children: [
                 const Icon(Icons.add, color: Colors.green),
@@ -46,7 +45,6 @@ class _TambahKategoriDialogState extends State<TambahKategoriDialog> {
             ),
             const SizedBox(height: 16),
 
-            // Info tipe kategori
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
@@ -75,7 +73,6 @@ class _TambahKategoriDialogState extends State<TambahKategoriDialog> {
             ),
             const SizedBox(height: 16),
 
-            // Input Nama Kategori
             const Text(
               "Nama Kategori",
               style: TextStyle(
@@ -101,7 +98,6 @@ class _TambahKategoriDialogState extends State<TambahKategoriDialog> {
             ),
             const SizedBox(height: 24),
 
-            // Tombol Aksi
             Row(
               children: [
                 Expanded(

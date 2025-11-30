@@ -44,9 +44,6 @@ class TransaksiController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ==============================
-  //  SIMPAN TRANSAKSI + NOTIF
-  // ==============================
   Future<void> simpanTransaksi({
     required String deskripsi,
     required String jumlahText,
@@ -84,7 +81,7 @@ class TransaksiController extends ChangeNotifier {
         dompetController.kurangiSaldo(dompetId, jumlah);
       }
 
-      // 🔥 KIRIM NOTIFIKASI
+      //kirim notifikasi
       await NotificationService.showNotification(
         "Transaksi berhasil",
         "${tipe == 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'} "

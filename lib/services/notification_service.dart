@@ -15,11 +15,9 @@ class NotificationService {
 
   static Future<void> init() async {
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
-
     const settings = InitializationSettings(android: android);
 
     await _plugin.initialize(settings);
-
     await _plugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin

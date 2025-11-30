@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import '../../models/kategori_model.dart';
 import '../../controllers/transaksi_controller.dart';
 import '../../controllers/dompet_controller.dart';
-import '../../controllers/auth_controller.dart'; 
+import '../../controllers/currency_controller.dart';
 
 class TambahTransaksiPage extends StatefulWidget {
   const TambahTransaksiPage({super.key});
@@ -37,35 +37,13 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
     super.dispose();
   }
 
-  String _getSymbol(String currencyCode) {
-    switch (currencyCode) {
-      case 'USD':
-        return '\$';
-      case 'EUR':
-        return '€';
-      case 'SGD':
-        return 'S\$';
-      case 'JPY':
-        return '¥';
-      case 'MYR':
-        return 'RM';
-      case 'AUD':
-        return 'A\$';
-      case 'IDR':
-      default:
-        return 'Rp';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final transaksiC = Provider.of<TransaksiController>(context);
     final dompetC = Provider.of<DompetController>(context);
+    final currencyC = Provider.of<CurrencyController>(context);
 
-    final authC = Provider.of<AuthController>(context);
-    final String mataUangCode = authC.selectedCurrency;
-    final double currentRate = authC.selectedRate;
-    final String simbol = _getSymbol(mataUangCode);
+    final simbol = currencyC.formatCurrency(1).replaceAll(RegExp(r'[0-9., ]'), "");
 
     final kategoriBox = Hive.box<KategoriModel>('kategori');
     final kategoriFiltered = kategoriBox.values
@@ -138,8 +116,7 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
                             currencySymbol: simbol,
                             validator: (v) {
                               if (v!.isEmpty) return "Wajib diisi";
-                              if (double.tryParse(v.replaceAll(',', '')) ==
-                                  null) {
+                              if (double.tryParse(v.replaceAll(',', '')) == null) {
                                 return "Input angka tidak valid";
                               }
                               if (double.parse(v.replaceAll(',', '')) <= 0) {
@@ -159,8 +136,9 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
                                 firstDate: DateTime(2020),
                                 lastDate: DateTime(2100),
                               );
-                              if (pilih != null)
+                              if (pilih != null) {
                                 setState(() => _tanggal = pilih);
+                              }
                             },
                             child: Container(
                               padding: const EdgeInsets.symmetric(
@@ -173,11 +151,7 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
                               ),
                               child: Row(
                                 children: [
-                                  Icon(
-                                    Icons.calendar_today,
-                                    size: 20,
-                                    color: primary,
-                                  ),
+                                  Icon(Icons.calendar_today, size: 20, color: primary),
                                   const SizedBox(width: 10),
                                   Text(
                                     DateFormat("dd/MM/yyyy").format(_tanggal),
@@ -185,10 +159,7 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
                                   ),
                                   const Spacer(),
                                   Text(
-                                    DateFormat(
-                                      'EEEE',
-                                      'id_ID',
-                                    ).format(_tanggal),
+                                    DateFormat('EEEE', 'id_ID').format(_tanggal),
                                     style: TextStyle(
                                       color: Colors.grey[600],
                                       fontSize: 14,
@@ -202,10 +173,7 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
 
                           _label("Kategori"),
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 4,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                             decoration: BoxDecoration(
                               border: Border.all(color: borderColor),
                               borderRadius: BorderRadius.circular(10),
@@ -223,8 +191,7 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
                                       ),
                                     )
                                     .toList(),
-                                onChanged: (v) =>
-                                    setState(() => _kategoriId = v),
+                                onChanged: (v) => setState(() => _kategoriId = v),
                               ),
                             ),
                           ),
@@ -241,8 +208,7 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
                               ),
                               child: Column(
                                 children: semuaDompetUser.map((d) {
-                                  double convertedSaldo =
-                                      d.saldoAwal * currentRate;
+                                  double convertedSaldo = currencyC.convertFromIdr(d.saldoAwal);
 
                                   return RadioListTile<String>(
                                     value: d.id,
@@ -250,16 +216,13 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
                                     activeColor: primary,
                                     title: Text(
                                       d.nama,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w500,
-                                      ),
+                                      style: const TextStyle(fontWeight: FontWeight.w500),
                                     ),
                                     subtitle: Text(
-                                      "$simbol ${NumberFormat('#,##0.##').format(convertedSaldo)}",
+                                      currencyC.formatCurrency(convertedSaldo),
                                       style: TextStyle(color: Colors.grey[600]),
                                     ),
-                                    onChanged: (v) =>
-                                        setState(() => _dompetId = v),
+                                    onChanged: (v) => setState(() => _dompetId = v),
                                   );
                                 }).toList(),
                               ),
@@ -269,7 +232,7 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
                     ),
                   ),
 
-                  // Tombol Simpan
+
                   Container(
                     padding: const EdgeInsets.all(16),
                     child: SizedBox(
@@ -286,10 +249,7 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
                         onPressed: _simpan,
                         child: const Text(
                           "Simpan transaksi",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
@@ -302,6 +262,7 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
 
   Future<void> _simpan() async {
     if (!_formKey.currentState!.validate()) return;
+
     if (_kategoriId == null || _dompetId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Pilih kategori dan dompet dulu")),
@@ -310,11 +271,11 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
     }
 
     final transaksiC = Provider.of<TransaksiController>(context, listen: false);
-    final authC = Provider.of<AuthController>(context, listen: false);
+    final currencyC = Provider.of<CurrencyController>(context, listen: false);
 
     double inputAmount = double.parse(_jumlahC.text.replaceAll(',', ''));
 
-    double finalAmountIDR = inputAmount / authC.selectedRate;
+    double finalAmountIDR = currencyC.convertFromIdr(inputAmount);
 
     await transaksiC.simpanTransaksi(
       deskripsi: _deskripsiC.text,
@@ -359,16 +320,16 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
   }
 
   Widget _label(String t) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Text(
-      t,
-      style: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-        color: Colors.grey[800],
-      ),
-    ),
-  );
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text(
+          t,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[800],
+          ),
+        ),
+      );
 
   Widget _inputField({
     required TextEditingController controller,
@@ -401,9 +362,7 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
             child: TextFormField(
               controller: controller,
               validator: validator,
-              keyboardType: isNumber
-                  ? TextInputType.number
-                  : TextInputType.text,
+              keyboardType: isNumber ? TextInputType.number : TextInputType.text,
               decoration: InputDecoration(
                 hintText: isNumber ? "0" : hint,
                 border: InputBorder.none,

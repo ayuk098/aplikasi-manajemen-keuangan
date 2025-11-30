@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pie_chart/pie_chart.dart';
-import 'package:intl/intl.dart';
-
 import '../../controllers/transaksi_controller.dart';
 import '../../controllers/kategori_controller.dart';
-import '../../controllers/auth_controller.dart';
+import '../../controllers/currency_controller.dart';
 import '../../models/transaksi_model.dart';
 import '../../models/kategori_model.dart';
 
@@ -16,23 +14,18 @@ class AnalisisPage extends StatefulWidget {
   State<AnalisisPage> createState() => _AnalisisPageState();
 }
 
-// Filter tipe untuk dropdown
 enum FilterTipe { pengeluaran, pemasukan, semua }
 
 class _AnalisisPageState extends State<AnalisisPage> {
   final Color primaryColor = const Color(0xFF006C4E);
 
-  // Realtime / Bulanan
   String _selectedPeriod = "Realtime";
-
-  // Filter tipe pemasukan/pengeluaran/semua
   FilterTipe _selectedType = FilterTipe.pengeluaran;
 
-  // Untuk chart
   Map<String, double> dataMap = {"Tidak Ada Data": 100.0};
   List<Color> colorList = [Colors.grey];
-  double _chartSum = 0.0; // total nominal (IDR)
-  double _displayTotal = 0.0; // total yg ditampilkan (IDR)
+  double _chartSum = 0.0;
+  double _displayTotal = 0.0;
 
   late TransaksiController _transaksiC;
   late KategoriController _kategoriC;
@@ -45,7 +38,6 @@ class _AnalisisPageState extends State<AnalisisPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _transaksiC = context.read<TransaksiController>();
       _kategoriC = context.read<KategoriController>();
-
       _transaksiC.addListener(_onDataChanged);
       _kategoriC.addListener(_onDataChanged);
       _listenerRegistered = true;
@@ -68,7 +60,7 @@ class _AnalisisPageState extends State<AnalisisPage> {
     _generateChartData(_transaksiC.semuaTransaksi, _kategoriC.semuaKategori);
   }
 
-  // LOGIKA FILTER & CHART
+  // logic filter
   void _generateChartData(
     List<TransaksiModel> semuaTransaksi,
     List<KategoriModel> semuaKategori,
@@ -77,19 +69,18 @@ class _AnalisisPageState extends State<AnalisisPage> {
 
     final now = DateTime.now();
 
-    // --------------------------- Filter Periode ---------------------------
+    // Filter periode
     List<TransaksiModel> filteredByPeriod = semuaTransaksi.where((t) {
-      final tanggal = t.tanggal;
       if (_selectedPeriod == "Realtime") {
-        return tanggal.year == now.year &&
-            tanggal.month == now.month &&
-            tanggal.day == now.day;
+        return t.tanggal.year == now.year &&
+            t.tanggal.month == now.month &&
+            t.tanggal.day == now.day;
       } else {
-        return tanggal.year == now.year && tanggal.month == now.month;
+        return t.tanggal.year == now.year && t.tanggal.month == now.month;
       }
     }).toList();
 
-    // --------------------------- Total period -----------------------------
+    // Total pemasukan/pengeluaran
     final totalPemasukan = filteredByPeriod
         .where((t) => t.tipe == "pemasukan")
         .fold(0.0, (sum, t) => sum + t.jumlah);
@@ -98,8 +89,8 @@ class _AnalisisPageState extends State<AnalisisPage> {
         .where((t) => t.tipe == "pengeluaran")
         .fold(0.0, (sum, t) => sum + t.jumlah);
 
-    // --------------------------- Filter tipe untuk chart -----------------
-    final List<TransaksiModel> filteredForChart = filteredByPeriod.where((t) {
+
+    final filteredForChart = filteredByPeriod.where((t) {
       switch (_selectedType) {
         case FilterTipe.pemasukan:
           return t.tipe == "pemasukan";
@@ -110,7 +101,7 @@ class _AnalisisPageState extends State<AnalisisPage> {
       }
     }).toList();
 
-    // --------------------------- Group kategori --------------------------
+    //kategori
     final Map<String, double> categoryTotals = {};
     for (var t in filteredForChart) {
       final kategori = semuaKategori.firstWhere(
@@ -132,7 +123,6 @@ class _AnalisisPageState extends State<AnalisisPage> {
 
     final chartSum = filteredForChart.fold(0.0, (sum, t) => sum + t.jumlah);
 
-    // Total yg tampil di bawah chart
     double displayTotal;
     switch (_selectedType) {
       case FilterTipe.pemasukan:
@@ -146,7 +136,7 @@ class _AnalisisPageState extends State<AnalisisPage> {
         break;
     }
 
-    // --------------------------- Warna -------------------------------
+    // warna chart
     final baseColors = [
       Colors.red,
       Colors.green,
@@ -176,15 +166,13 @@ class _AnalisisPageState extends State<AnalisisPage> {
     setState(() {
       dataMap = newDataMap;
       colorList = newColors;
-      _chartSum = chartSum; // dalam IDR
-      _displayTotal = displayTotal; // dalam IDR
+      _chartSum = chartSum;
+      _displayTotal = displayTotal;
     });
   }
 
-  // -------------------------------------
-  // LEGEND UI
-  // -------------------------------------
-  Widget _buildLegend(AuthController auth) {
+ 
+  Widget _buildLegend(CurrencyController currency) {
     if (dataMap.isEmpty ||
         (dataMap.keys.first == "Tidak Ada Data" && _chartSum == 0.0)) {
       return Padding(
@@ -200,8 +188,7 @@ class _AnalisisPageState extends State<AnalisisPage> {
     return Column(
       children: dataMap.keys.map((key) {
         final index = dataMap.keys.toList().indexOf(key);
-        final color = colorList[index % colorList.length];
-
+        final color = colorList[index];
         final amountIDR = dataMap[key]!;
         final percentage = _chartSum > 0 ? (amountIDR / _chartSum * 100) : 0.0;
 
@@ -217,12 +204,11 @@ class _AnalisisPageState extends State<AnalisisPage> {
               const SizedBox(width: 10),
               Expanded(child: Text(key, style: const TextStyle(fontSize: 16))),
 
-              // NOMINAL + PERCENT
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    auth.formatFromIdr(amountIDR), // <- konversi
+                    currency.formatFromIdr(amountIDR),
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   Text(
@@ -238,13 +224,11 @@ class _AnalisisPageState extends State<AnalisisPage> {
     );
   }
 
-  // -------------------------------------
-  // BUILD
-  // -------------------------------------
+
   @override
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.of(context).padding.top;
-    final auth = Provider.of<AuthController>(context); // <<< penting
+    final currency = Provider.of<CurrencyController>(context);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -274,84 +258,22 @@ class _AnalisisPageState extends State<AnalisisPage> {
 
               const SizedBox(height: 16),
 
-              // ========== PERIOD SWITCH ==========
               Container(
                 height: 45,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white, width: 2),
                 ),
                 child: Row(
                   children: [
-                    // REALTIME
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _selectedPeriod = "Realtime";
-                          });
-                          _onDataChanged();
-                        },
-                        child: Container(
-                          margin: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                            color: _selectedPeriod == "Realtime"
-                                ? primaryColor
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            "Realtime",
-                            style: TextStyle(
-                              color: _selectedPeriod == "Realtime"
-                                  ? Colors.white
-                                  : Colors.black,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // BULANAN
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _selectedPeriod = "Bulanan";
-                          });
-                          _onDataChanged();
-                        },
-                        child: Container(
-                          margin: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                            color: _selectedPeriod == "Bulanan"
-                                ? primaryColor
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            "Bulanan",
-                            style: TextStyle(
-                              color: _selectedPeriod == "Bulanan"
-                                  ? Colors.white
-                                  : Colors.black,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+                    Expanded(child: _periodBtn("Realtime")),
+                    Expanded(child: _periodBtn("Bulanan")),
                   ],
                 ),
               ),
 
               const SizedBox(height: 12),
 
-              // ===== FILTER TIPE =====
               Container(
                 height: 40,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -396,7 +318,6 @@ class _AnalisisPageState extends State<AnalisisPage> {
           children: [
             const SizedBox(height: 32),
 
-            // PIE CHART (data tetap IDR)
             PieChart(
               dataMap: dataMap,
               colorList: colorList,
@@ -410,26 +331,46 @@ class _AnalisisPageState extends State<AnalisisPage> {
               chartValuesOptions: const ChartValuesOptions(
                 showChartValues: false,
                 showChartValueBackground: false,
-                showChartValuesInPercentage: false,
-                showChartValuesOutside: false,
               ),
             ),
 
             const SizedBox(height: 24),
 
-            // ==== TOTAL (konversi mata uang) ====
             Text(
-              "Total: ${auth.formatFromIdr(_displayTotal)}",
+              "Total: ${currency.formatFromIdr(_displayTotal)}",
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 20),
 
-            // ==== LEGEND CATEGORIES ====
-            _buildLegend(auth),
+            _buildLegend(currency),
 
             const SizedBox(height: 80),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _periodBtn(String label) {
+    return GestureDetector(
+      onTap: () {
+        setState(() => _selectedPeriod = label);
+        _onDataChanged();
+      },
+      child: Container(
+        margin: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: _selectedPeriod == label ? primaryColor : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: TextStyle(
+            color: _selectedPeriod == label ? Colors.white : Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );

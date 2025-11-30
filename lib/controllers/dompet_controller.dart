@@ -12,19 +12,17 @@ class DompetController extends ChangeNotifier {
 
   DompetController(this.currentUserId) {
     _dompetBox = Hive.box<DompetModel>('dompet');
-    initDefaultDompet(); // <-- penting!
+    initDefaultDompet();
   }
 
-  // Semua dompet milik user yang login
+  // dompet milik user yang login
   List<DompetModel> get semuaDompet =>
       _dompetBox.values.where((d) => d.userId == currentUserId).toList();
 
   double get totalSaldo =>
       semuaDompet.fold(0.0, (sum, d) => sum + d.saldoAwal);
 
-  // ========================
-  //  DEFAULT DOMPET
-  // ========================
+  //default
   void initDefaultDompet() {
     final flagName = "defaultDompet_$currentUserId";
     if (flagBox.get(flagName) == true) return;
@@ -42,9 +40,7 @@ class DompetController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ========================
-  // CRUD DOMPET
-  // ========================
+//tambah data
   void tambahDompet(String nama, double saldoAwal) {
     final newDompet = DompetModel(
       id: uuid.v4(),
@@ -57,6 +53,7 @@ class DompetController extends ChangeNotifier {
     notifyListeners();
   }
 
+//edit data
   void editDompet(String id, String nama, double saldoAwal) {
     final d = _dompetBox.get(id);
     if (d == null || d.userId != currentUserId) return;
@@ -80,9 +77,7 @@ class DompetController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ========================
-  // UPDATE SALDO (DARI TRANSAKSI)
-  // ========================
+//update data
   void tambahSaldo(String dompetId, double jumlah) {
     final d = _dompetBox.get(dompetId);
     if (d == null) return;
@@ -98,6 +93,7 @@ class DompetController extends ChangeNotifier {
     notifyListeners();
   }
 
+//kurangi sisa saldo
   void kurangiSaldo(String dompetId, double jumlah) {
     final d = _dompetBox.get(dompetId);
     if (d == null) return;
